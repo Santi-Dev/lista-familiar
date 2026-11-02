@@ -1,6 +1,8 @@
 name: ios-preview
 
 on:
+  push:
+    paths: ["swift_space/**", ".github/workflows/ios-preview.yml"]
   workflow_dispatch:
     inputs:
       screens:
@@ -47,7 +49,7 @@ jobs:
           mkdir -p out
           for mode in light dark; do
             xcrun simctl ui "$UDID" appearance $mode
-            for s in ${{ inputs.screens }}; do
+            for s in ${{ inputs.screens || 'welcome login register family-setup lists detail settings create-list item-form' }}; do
               xcrun simctl terminate "$UDID" "$BUNDLE_ID" 2>/dev/null || true
               xcrun simctl launch "$UDID" "$BUNDLE_ID" -PREVIEW_SCREEN "$s"
               sleep 4
