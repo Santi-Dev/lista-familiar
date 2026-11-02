@@ -1,0 +1,48 @@
+name: build-ipa
+
+# Genera un .ipa SIN FIRMAR para instalarlo desde Windows con Sideloadly/AltStore (Apple ID gratuito).
+# Se lanza a mano: Actions → build-ipa → Run workflow. Guía: docs/INSTALAR_SIN_MAC.md
+on:
+  workflow_dispatch:
+
+env:
+  SCHEME: FamilyShoppingLists
+
+jobs:
+  ipa:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar XcodeGen
+        run: brew install xcodegen
+
+      - name: Generar proyecto
+        working-directory: swift_space
+        run: xcodegen generate
+
+      - name: Compilar para dispositivo (sin firma)
+        working-directory: swift_space
+        run: |
+          xcodebuild -project FamilyShoppingLists.xcodeproj -scheme "$SCHEME" \
+            -sdk iphoneos -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" build
+
+      - name: Empaquetar .ipa
+        run: |
+          APP=$(find swift_space/build/Build/Products/Release-iphoneos -maxdepth 1 -name "*.app" | head -1)
+          echo "App: $APP"
+          mkdir -p out/Payload
+          cp -R "$APP" out/Payload/
+          (cd out && zip -qry ListaFamiliar.ipa Payload && rm -rf Payload)
+          ls -lh out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ListaFamiliar-ipa
+          path: out/ListaFamiliar.ipa
+          retention-days: 14
