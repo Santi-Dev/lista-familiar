@@ -109,7 +109,7 @@ struct SettingsView: View {
     private func loadGroup() async {
         isLoading = true
         do {
-            let g: FamilyGroupDto = try await APIClient.shared.request(path: "/api/family-groups/me", method: "GET")
+            let g: FamilyGroupDto = try await APIClient.shared.myGroup()
             group = g
             errorMsg = nil
         } catch {

@@ -1,19 +1,13 @@
 import SwiftUI
 
-/// Modo de capturas para CI: `-PREVIEW_SCREEN <nombre>` sustituye la red por datos de
-/// ejemplo y muestra directamente una pantalla. No afecta al uso normal de la app.
+/// Modo de capturas para CI: `-PREVIEW_SCREEN <nombre>` sustituye Supabase por datos de
+/// ejemplo (`PreviewBackend`) y muestra directamente una pantalla. No afecta al uso normal.
 enum PreviewMode {
     static let screen: String? = {
         let args = ProcessInfo.processInfo.arguments
         guard let i = args.firstIndex(of: "-PREVIEW_SCREEN"), i + 1 < args.count else { return nil }
         return args[i + 1]
     }()
-
-    static func activate() {
-        guard screen != nil else { return }
-        URLProtocol.registerClass(PreviewURLProtocol.self)
-        KeychainHelper.authToken = "preview-token"
-    }
 
     @ViewBuilder
     static func root(_ name: String) -> some View {
@@ -31,55 +25,66 @@ enum PreviewMode {
     }
 }
 
-final class PreviewURLProtocol: URLProtocol {
-    override class func canInit(with request: URLRequest) -> Bool { true }
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
-
-    override func startLoading() {
-        let path = request.url?.path ?? ""
-        let (status, body) = Self.response(for: path, query: request.url?.query ?? "")
-        let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil,
-                                       headerFields: ["Content-Type": "application/json"])!
-        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-        client?.urlProtocol(self, didLoad: Data(body.utf8))
-        client?.urlProtocolDidFinishLoading(self)
-    }
-
-    override func stopLoading() {}
-
-    private static let me = #"{"id":"u1","name":"Lucía","email":"lucia@example.com","familyGroupId":"g1"}"#
-    private static let user = #"{"id":"u1","name":"Lucía"}"#
+struct PreviewBackend: Backend {
     private static let now = "2026-01-15T10:00:00.000Z"
+    private static let lucia = UserPublicDto(id: "u1", name: "Lucía")
+    private static var luciaJSON: JSONValue { .object(["id": .string("u1"), "name": .string("Lucía")]) }
 
-    private static func list(_ id: String, _ name: String, _ total: Int, _ done: Int) -> String {
-        #"{"id":"\#(id)","name":"\#(name)","isArchived":false,"createdBy":\#(user),"itemCount":\#(total),"purchasedCount":\#(done),"createdAt":"\#(now)","updatedAt":"\#(now)"}"#
+    private static func list(_ id: String, _ name: String, _ total: Double, _ done: Double) -> ShoppingListSummaryDto {
+        ShoppingListSummaryDto(id: id, name: name, isArchived: false, createdBy: luciaJSON,
+                               itemCount: total, purchasedCount: done, createdAt: now, updatedAt: now)
     }
 
-    private static func item(_ id: String, _ name: String, _ qty: String, _ cat: String, _ bought: Bool) -> String {
-        #"{"id":"\#(id)","shoppingListId":"l1","name":"\#(name)","quantity":"\#(qty)","category":"\#(cat)","isPurchased":\#(bought),"purchasedBy":\#(bought ? user : "null"),"purchasedAt":\#(bought ? "\"\(now)\"" : "null"),"addedBy":\#(user),"createdAt":"\#(now)","updatedAt":"\#(now)"}"#
+    private static func item(_ id: String, _ name: String, _ qty: String, _ cat: String, _ bought: Bool) -> ListItemDto {
+        ListItemDto(id: id, shoppingListId: "l1", name: name, quantity: qty, category: cat, isPurchased: bought,
+                    purchasedBy: bought ? luciaJSON : nil, purchasedAt: bought ? now : nil,
+                    addedBy: luciaJSON, createdAt: now, updatedAt: now)
     }
 
-    private static func response(for path: String, query: String) -> (Int, String) {
-        switch path {
-        case "/api/auth/me":
-            return (200, #"{"user":\#(me)}"#)
-        case "/api/family-groups/me":
-            return (200, #"{"id":"g1","name":"Familia García","inviteCode":"ABC123","createdById":"u1","members":[\#(user),{"id":"u2","name":"Pablo"},{"id":"u3","name":"Marta"}],"createdAt":"\#(now)"}"#)
-        case "/api/lists":
-            if query.contains("archived=true") { return (200, #"{"items":[]}"#) }
-            return (200, #"{"items":[\#(list("l1", "Mercado semanal", 6, 2)),\#(list("l2", "Cumpleaños de Marta", 4, 0)),\#(list("l3", "Limpieza del hogar", 3, 3))]}"#)
-        case "/api/lists/l1/items":
-            let items = [
-                item("i1", "Manzanas", "1 kg", "FRUTAS_VERDURAS", false),
-                item("i2", "Leche", "2 L", "LACTEOS_HUEVOS", false),
-                item("i3", "Pechuga de pollo", "500 g", "CARNES_PESCADO", false),
-                item("i4", "Pan integral", "1", "PANADERIA", true),
-                item("i5", "Arroz", "1 kg", "DESPENSA", true),
-                item("i6", "Agua con gas", "6", "BEBIDAS", false),
-            ].joined(separator: ",")
-            return (200, #"{"list":\#(list("l1", "Mercado semanal", 6, 2)),"items":[\#(items)]}"#)
-        default:
-            return (200, "{}")
-        }
+    private static let group = FamilyGroupDto(
+        id: "g1", name: "Familia García", inviteCode: "ABC123", createdById: "u1",
+        members: [lucia, UserPublicDto(id: "u2", name: "Pablo"), UserPublicDto(id: "u3", name: "Marta")],
+        createdAt: now)
+
+    func me() async throws -> MeResponseDto {
+        MeResponseDto(user: AuthUserDto(id: "u1", email: "lucia@example.com", name: "Lucía", familyGroupId: "g1"))
     }
+    func login(body: LoginDto) async throws -> AuthResponseDto { AuthResponseDto(token: "preview", user: try await me().user) }
+    func signup(body: SignupDto) async throws -> AuthResponseDto { try await login(body: LoginDto(email: body.email, password: body.password)) }
+    func signOut() async {}
+
+    func myGroup() async throws -> FamilyGroupDto { Self.group }
+    func create(body: CreateGroupDto) async throws -> FamilyGroupDto { Self.group }
+    func join(body: JoinGroupDto) async throws -> FamilyGroupDto { Self.group }
+    func leave() async throws -> SuccessDto { SuccessDto(success: true) }
+
+    func getLists(archived: String?) async throws -> ListsResponseDto {
+        if archived == "true" { return ListsResponseDto(items: []) }
+        return ListsResponseDto(items: [
+            Self.list("l1", "Mercado semanal", 6, 2),
+            Self.list("l2", "Cumpleaños de Marta", 4, 0),
+            Self.list("l3", "Limpieza del hogar", 3, 3),
+        ])
+    }
+    func create(body: CreateListDto) async throws -> ShoppingListSummaryDto { Self.list("l9", body.name, 0, 0) }
+    func update(id: String, body: UpdateListDto) async throws -> ShoppingListSummaryDto { Self.list(id, body.name ?? "Lista", 0, 0) }
+    func delete(id: String) async throws -> SuccessResponseDto { SuccessResponseDto(success: true) }
+
+    func getListItems(id: String) async throws -> ListItemsResponseDto {
+        ListItemsResponseDto(list: Self.list("l1", "Mercado semanal", 6, 2), items: [
+            Self.item("i1", "Manzanas", "1 kg", "FRUTAS_VERDURAS", false),
+            Self.item("i2", "Leche", "2 L", "LACTEOS_HUEVOS", false),
+            Self.item("i3", "Pechuga de pollo", "500 g", "CARNES_PESCADO", false),
+            Self.item("i4", "Pan integral", "1", "PANADERIA", true),
+            Self.item("i5", "Arroz", "1 kg", "DESPENSA", true),
+            Self.item("i6", "Agua con gas", "6", "BEBIDAS", false),
+        ])
+    }
+    func createItem(id: String, body: CreateItemDto) async throws -> ListItemDto {
+        Self.item("i9", body.name, body.quantity ?? "", body.category, false)
+    }
+    func updateItem(id: String, body: UpdateItemDto) async throws -> ListItemDto {
+        Self.item(id, body.name ?? "Artículo", body.quantity ?? "", body.category ?? "OTROS", body.isPurchased ?? false)
+    }
+    func deleteItem(id: String) async throws -> SuccessDto { SuccessDto(success: true) }
 }

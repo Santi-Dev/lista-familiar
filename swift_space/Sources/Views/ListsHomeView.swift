@@ -182,7 +182,7 @@ struct ListsHomeView: View {
 
     private func loadGroup() async {
         do {
-            let g: FamilyGroupDto = try await APIClient.shared.request(path: "/api/family-groups/me", method: "GET")
+            let g: FamilyGroupDto = try await APIClient.shared.myGroup()
             group = g
         } catch {
             logger.error("loadGroup: \(error.localizedDescription)")

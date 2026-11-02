@@ -12,27 +12,18 @@ class SessionModel {
     var hasFamilyGroup: Bool { user?.familyGroupId != nil }
 
     init() {
-        Task { @MainActor in
-            // Cualquier 401 con token: volver al login.
-            APIClient.onUnauthorized = { [weak self] in self?.user = nil }
-            await checkAuth()
-        }
+        Task { @MainActor in await checkAuth() }
     }
 
+    /// Supabase guarda la sesión en el Keychain; si existe y es válida, `me()` devuelve el usuario.
     @MainActor
     func checkAuth() async {
         isLoading = true
         defer { isLoading = false }
-        guard APIClient.shared.authToken != nil else {
-            user = nil
-            return
-        }
         do {
-            let response: MeResponseDto = try await APIClient.shared.me()
-            user = response.user
+            user = try await APIClient.shared.me().user
         } catch {
             logger.error("checkAuth failed: \(error.localizedDescription)")
-            APIClient.shared.authToken = nil
             user = nil
         }
     }
@@ -40,21 +31,19 @@ class SessionModel {
     @MainActor
     func login(email: String, password: String) async throws {
         let response = try await APIClient.shared.login(body: LoginDto(email: email, password: password))
-        APIClient.shared.authToken = response.token
         user = response.user
     }
 
     @MainActor
     func signup(email: String, password: String, name: String) async throws {
         let response = try await APIClient.shared.signup(body: SignupDto(email: email, password: password, name: name))
-        APIClient.shared.authToken = response.token
         user = response.user
     }
 
     @MainActor
     func logout() {
-        APIClient.shared.authToken = nil
         user = nil
+        Task { await APIClient.shared.signOut() }
     }
 
     @MainActor
@@ -65,8 +54,7 @@ class SessionModel {
     @MainActor
     func refreshMe() async {
         do {
-            let response: MeResponseDto = try await APIClient.shared.me()
-            user = response.user
+            user = try await APIClient.shared.me().user
         } catch {
             logger.error("refreshMe failed: \(error.localizedDescription)")
         }

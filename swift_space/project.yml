@@ -1,18 +1,21 @@
 name: FamilyShoppingLists
 options:
   createIntermediateGroups: true
-configFiles:
-  Debug: Config.xcconfig
-  Release: Config.xcconfig
 settings:
   base:
     SWIFT_VERSION: "5.10"
     IPHONEOS_DEPLOYMENT_TARGET: "18.0"
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    from: 2.20.0
 targets:
   FamilyShoppingLists:
     type: application
     platform: iOS
     deploymentTarget: "18.0"
+    dependencies:
+      - package: Supabase
     sources:
       - Sources
       - Assets.xcassets
@@ -28,5 +31,4 @@ targets:
         CFBundleDisplayName: FamilyShoppingLists
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
-        APIBaseURL: $(API_BASE_URL)
         ITSAppUsesNonExemptEncryption: false
