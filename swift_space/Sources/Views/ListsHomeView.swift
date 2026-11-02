@@ -47,9 +47,10 @@ struct ListsHomeView: View {
             .refreshable { await loadData() }
             .task { await loadGroup(); await loadData() }
             .task(id: showArchived) { await loadData() }
+            .task { for await _ in APIClient.shared.changes(tables: ["shopping_lists", "list_items"]) { await loadData() } }
             .task {
                 while !Task.isCancelled {
-                    try? await Task.sleep(for: .seconds(5))
+                    try? await Task.sleep(for: .seconds(30))
                     guard scenePhase == .active else { continue }
                     await loadData()
                 }

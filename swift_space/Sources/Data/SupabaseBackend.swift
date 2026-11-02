@@ -288,4 +288,27 @@ final class SupabaseBackend: Backend, @unchecked Sendable {
             return SuccessDto(success: true)
         }
     }
+
+    // MARK: - Realtime
+
+    /// Canal de Realtime con un `postgresChange` por tabla. RLS filtra los eventos a tu grupo.
+    func changes(tables: [String]) -> AsyncStream<Void> {
+        AsyncStream { continuation in
+            let channel = client.channel("rt-\(UUID().uuidString)")
+            let streams = tables.map { channel.postgresChange(AnyAction.self, schema: "public", table: $0) }
+            let task = Task {
+                do { try await channel.subscribeWithError() } catch { continuation.finish(); return }
+                await withTaskGroup(of: Void.self) { group in
+                    for stream in streams {
+                        group.addTask { for await _ in stream { continuation.yield() } }
+                    }
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in
+                task.cancel()
+                Task { await channel.unsubscribe() }
+            }
+        }
+    }
 }

@@ -87,4 +87,5 @@ struct PreviewBackend: Backend {
         Self.item(id, body.name ?? "Artículo", body.quantity ?? "", body.category ?? "OTROS", body.isPurchased ?? false)
     }
     func deleteItem(id: String) async throws -> SuccessDto { SuccessDto(success: true) }
+    func changes(tables: [String]) -> AsyncStream<Void> { AsyncStream { $0.finish() } }
 }

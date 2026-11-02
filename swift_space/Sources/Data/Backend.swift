@@ -31,6 +31,9 @@ protocol Backend: Sendable {
     func createItem(id: String, body: CreateItemDto) async throws -> ListItemDto
     func updateItem(id: String, body: UpdateItemDto) async throws -> ListItemDto
     func deleteItem(id: String) async throws -> SuccessDto
+
+    /// Emite un valor cada vez que cambia alguna de las tablas (Realtime); termina si se cancela la tarea.
+    func changes(tables: [String]) -> AsyncStream<Void>
 }
 
 enum APIClient {

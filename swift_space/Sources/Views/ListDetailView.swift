@@ -80,9 +80,10 @@ struct ListDetailView: View {
             })
         }
         .task { await loadItems() }
+        .task { for await _ in APIClient.shared.changes(tables: ["shopping_lists", "list_items"]) { await loadItems() } }
         .task {
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(3))
+                try? await Task.sleep(for: .seconds(30))
                 guard scenePhase == .active else { continue }
                 await loadItems()
             }
