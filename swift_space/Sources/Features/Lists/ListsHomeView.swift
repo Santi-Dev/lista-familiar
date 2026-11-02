@@ -82,7 +82,7 @@ struct ListsHomeView: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: Theme.Spacing.sm) {
-                        ForEach(lists, id: \.id) { list in
+                        ForEach(vm.lists, id: \.id) { list in
                             listCard(list)
                         }
                     }
