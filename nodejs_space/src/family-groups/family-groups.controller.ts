@@ -1,5 +1,6 @@
 import { Controller, Post, Get, Body, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiProperty } from '@nestjs/swagger';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { FamilyGroupsService } from './family-groups.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { IsString, MinLength, MaxLength, Length } from 'class-validator';
@@ -32,7 +33,7 @@ export class SuccessDto {
 
 @ApiTags('FamilyGroups')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ThrottlerGuard)
 @Controller('api/family-groups')
 export class FamilyGroupsController {
   constructor(private service: FamilyGroupsService) {}
@@ -42,6 +43,7 @@ export class FamilyGroupsController {
     return this.service.create(req.user.userId, dto.name);
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('join')
   async join(@Request() req: any, @Body() dto: JoinGroupDto): Promise<FamilyGroupDto> {
     return this.service.join(req.user.userId, dto.inviteCode);

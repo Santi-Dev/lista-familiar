@@ -4,3 +4,4 @@ dist/
 *.xcodeproj/
 Info.plist
 .DS_Store
+previews/

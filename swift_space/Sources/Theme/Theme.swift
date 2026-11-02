@@ -2,14 +2,22 @@ import SwiftUI
 
 enum Theme {
     enum Colors {
-        static let background = Color(red: 0.965, green: 0.957, blue: 0.933)
-        static let surface = Color.white
-        static let textPrimary = Color(red: 0.118, green: 0.165, blue: 0.137)
-        static let textSecondary = Color(red: 0.373, green: 0.420, blue: 0.392)
-        static let brand = Color(red: 0.180, green: 0.490, blue: 0.310)
-        static let accent = Color(red: 0.878, green: 0.478, blue: 0.180)
-        static let separator = Color(red: 0.894, green: 0.878, blue: 0.839)
+        static let background = dynamic(light: (0.965, 0.957, 0.933), dark: (0.071, 0.082, 0.073))
+        static let surface = dynamic(light: (1, 1, 1), dark: (0.110, 0.129, 0.114))
+        static let textPrimary = dynamic(light: (0.118, 0.165, 0.137), dark: (0.933, 0.949, 0.933))
+        static let textSecondary = dynamic(light: (0.373, 0.420, 0.392), dark: (0.604, 0.647, 0.616))
+        static let brand = dynamic(light: (0.180, 0.490, 0.310), dark: (0.263, 0.627, 0.420))
+        static let accent = dynamic(light: (0.878, 0.478, 0.180), dark: (0.910, 0.545, 0.259))
+        static let separator = dynamic(light: (0.894, 0.878, 0.839), dark: (0.165, 0.196, 0.173))
         static let destructive = Color.red
+
+        /// Color que cambia con el modo claro/oscuro del sistema.
+        private static func dynamic(light: (CGFloat, CGFloat, CGFloat), dark: (CGFloat, CGFloat, CGFloat)) -> Color {
+            Color(uiColor: UIColor { traits in
+                let c = traits.userInterfaceStyle == .dark ? dark : light
+                return UIColor(red: c.0, green: c.1, blue: c.2, alpha: 1)
+            })
+        }
     }
 
     enum Spacing {

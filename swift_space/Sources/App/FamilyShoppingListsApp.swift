@@ -10,8 +10,14 @@ struct FamilyShoppingListsApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .environment(session)
+            Group {
+                if let screen = PreviewMode.screen {
+                    PreviewMode.root(screen)
+                } else {
+                    RootView()
+                }
+            }
+            .environment(session)
         }
     }
 }

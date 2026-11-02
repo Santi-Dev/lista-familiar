@@ -1,6 +1,7 @@
 import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -12,7 +13,15 @@ export class AuthService {
     const existing = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) throw new ConflictException({ statusCode: 409, message: 'Este correo ya está registrado', code: 'EMAIL_TAKEN' });
     const hashed = await bcrypt.hash(password, 10);
-    const user = await this.prisma.user.create({ data: { email: normalizedEmail, password: hashed, name: name.trim() } });
+    let user;
+    try {
+      user = await this.prisma.user.create({ data: { email: normalizedEmail, password: hashed, name: name.trim() } });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        throw new ConflictException({ statusCode: 409, message: 'Este correo ya está registrado', code: 'EMAIL_TAKEN' });
+      }
+      throw e;
+    }
     const token = this.jwt.sign({ sub: user.id });
     return { token, user: this.toAuthUser(user) };
   }

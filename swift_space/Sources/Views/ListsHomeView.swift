@@ -47,9 +47,10 @@ struct ListsHomeView: View {
             .refreshable { await loadData() }
             .task { await loadGroup(); await loadData() }
             .task(id: showArchived) { await loadData() }
+            .task { for await _ in APIClient.shared.changes(tables: ["shopping_lists", "list_items"]) { await loadData() } }
             .task {
                 while !Task.isCancelled {
-                    try? await Task.sleep(for: .seconds(5))
+                    try? await Task.sleep(for: .seconds(30))
                     guard scenePhase == .active else { continue }
                     await loadData()
                 }
@@ -182,7 +183,7 @@ struct ListsHomeView: View {
 
     private func loadGroup() async {
         do {
-            let g: FamilyGroupDto = try await APIClient.shared.request(path: "/api/family-groups/me", method: "GET")
+            let g: FamilyGroupDto = try await APIClient.shared.myGroup()
             group = g
         } catch {
             logger.error("loadGroup: \(error.localizedDescription)")

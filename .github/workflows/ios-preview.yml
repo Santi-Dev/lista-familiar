@@ -1,0 +1,64 @@
+name: ios-preview
+
+on:
+  push:
+    paths: ["swift_space/**", ".github/workflows/ios-preview.yml"]
+  workflow_dispatch:
+    inputs:
+      screens:
+        description: "Pantallas separadas por espacios"
+        default: "welcome login register family-setup lists detail settings create-list item-form"
+
+env:
+  BUNDLE_ID: com.santidev.listafamiliar
+  SCHEME: FamilyShoppingLists
+
+jobs:
+  preview:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar XcodeGen
+        run: brew install xcodegen
+
+      - name: Generar proyecto
+        working-directory: swift_space
+        run: xcodegen generate
+
+      - name: Compilar
+        working-directory: swift_space
+        run: |
+          mkdir -p ../out
+          set -o pipefail
+          xcodebuild -project FamilyShoppingLists.xcodeproj -scheme "$SCHEME" \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build 2>&1 | tee ../out/build.log \
+            || { grep -E "error:" ../out/build.log | sort -u > ../out/errors.txt; exit 1; }
+
+      - name: Capturas
+        run: |
+          APP=$(find swift_space/build/Build/Products -name "*.app" -maxdepth 3 | head -1)
+          UDID=$(xcrun simctl list devices available | grep -E "iPhone 1[5-7]( Pro)? \(" | head -1 | grep -oE "[0-9A-F-]{36}")
+          echo "Simulador: $UDID  App: $APP"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" "$APP"
+          xcrun simctl status_bar "$UDID" override --time 9:41 --batteryState charged --batteryLevel 100 || true
+          mkdir -p out
+          for mode in light dark; do
+            xcrun simctl ui "$UDID" appearance $mode
+            for s in ${{ inputs.screens || 'welcome login register family-setup lists detail settings create-list item-form' }}; do
+              xcrun simctl terminate "$UDID" "$BUNDLE_ID" 2>/dev/null || true
+              xcrun simctl launch "$UDID" "$BUNDLE_ID" -PREVIEW_SCREEN "$s"
+              sleep 4
+              xcrun simctl io "$UDID" screenshot "out/${s}-${mode}.png"
+            done
+          done
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-preview
+          path: out/
