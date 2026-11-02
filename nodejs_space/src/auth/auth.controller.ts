@@ -1,5 +1,6 @@
 import { Controller, Post, Get, Body, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiProperty } from '@nestjs/swagger';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { IsEmail, IsString, MinLength, MaxLength } from 'class-validator';
@@ -32,15 +33,18 @@ export class LoginDto {
 }
 
 @ApiTags('Auth')
+@UseGuards(ThrottlerGuard)
 @Controller('api')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('signup')
   async signup(@Body() dto: SignupDto): Promise<AuthResponseDto> {
     return this.authService.signup(dto.email, dto.password, dto.name);
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('auth/login')
   async login(@Body() dto: LoginDto): Promise<AuthResponseDto> {
     return this.authService.login(dto.email, dto.password);

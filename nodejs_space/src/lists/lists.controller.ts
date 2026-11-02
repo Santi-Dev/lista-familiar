@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, ParseUUIDPipe, Request } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ListsService } from './lists.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -53,12 +53,12 @@ export class ListsController {
   }
 
   @Patch(':id')
-  async update(@Request() req: any, @Param('id') id: string, @Body() dto: UpdateListDto): Promise<ShoppingListSummaryDto> {
+  async update(@Request() req: any, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateListDto): Promise<ShoppingListSummaryDto> {
     return this.service.updateList(req.user.userId, id, dto);
   }
 
   @Delete(':id')
-  async delete(@Request() req: any, @Param('id') id: string): Promise<SuccessResponseDto> {
+  async delete(@Request() req: any, @Param('id', ParseUUIDPipe) id: string): Promise<SuccessResponseDto> {
     return this.service.deleteList(req.user.userId, id);
   }
 }

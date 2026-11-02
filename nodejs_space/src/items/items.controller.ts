@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, ParseUUIDPipe, Request } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ItemsService } from './items.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -34,7 +34,7 @@ export class CreateItemDto {
 
 export class UpdateItemDto {
   @ApiPropertyOptional() @IsOptional() @IsString() @MinLength(1) @MaxLength(80) name?: string;
-  @ApiPropertyOptional({ nullable: true, type: String }) @IsOptional() @IsString() quantity?: string | null;
+  @ApiPropertyOptional({ nullable: true, type: String }) @IsOptional() @IsString() @MaxLength(30) quantity?: string | null;
   @ApiPropertyOptional({ enum: ItemCategory }) @IsOptional() @IsEnum(ItemCategory) category?: ItemCategory;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isPurchased?: boolean;
 }
@@ -47,22 +47,22 @@ export class ItemsController {
   constructor(private service: ItemsService) {}
 
   @Get('lists/:id/items')
-  async getListItems(@Request() req: any, @Param('id') id: string): Promise<ListItemsResponseDto> {
+  async getListItems(@Request() req: any, @Param('id', ParseUUIDPipe) id: string): Promise<ListItemsResponseDto> {
     return this.service.getListItems(req.user.userId, id);
   }
 
   @Post('lists/:id/items')
-  async createItem(@Request() req: any, @Param('id') id: string, @Body() dto: CreateItemDto): Promise<ListItemDto> {
+  async createItem(@Request() req: any, @Param('id', ParseUUIDPipe) id: string, @Body() dto: CreateItemDto): Promise<ListItemDto> {
     return this.service.createItem(req.user.userId, id, dto);
   }
 
   @Patch('items/:id')
-  async updateItem(@Request() req: any, @Param('id') id: string, @Body() dto: UpdateItemDto): Promise<ListItemDto> {
+  async updateItem(@Request() req: any, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateItemDto): Promise<ListItemDto> {
     return this.service.updateItem(req.user.userId, id, dto);
   }
 
   @Delete('items/:id')
-  async deleteItem(@Request() req: any, @Param('id') id: string): Promise<SuccessDto> {
+  async deleteItem(@Request() req: any, @Param('id', ParseUUIDPipe) id: string): Promise<SuccessDto> {
     return this.service.deleteItem(req.user.userId, id);
   }
 }

@@ -13,6 +13,8 @@ class SessionModel {
 
     init() {
         Task { @MainActor in
+            // Cualquier 401 con token: volver al login.
+            APIClient.onUnauthorized = { [weak self] in self?.user = nil }
             await checkAuth()
         }
     }

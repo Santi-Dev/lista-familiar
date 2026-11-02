@@ -43,6 +43,10 @@ final class APIClient: @unchecked Sendable {
         }
     }
 
+    /// Se invoca cuando el servidor responde 401 a una petición que llevaba token
+    /// (sesión vencida o inválida). El token ya fue borrado del Keychain.
+    @MainActor static var onUnauthorized: (() -> Void)?
+
     var authToken: String? {
         get { KeychainHelper.authToken }
         set { KeychainHelper.authToken = newValue }
@@ -95,6 +99,10 @@ final class APIClient: @unchecked Sendable {
 
         let (data, response) = try await session.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        if status == 401, authToken != nil {
+            authToken = nil
+            await MainActor.run { Self.onUnauthorized?() }
+        }
         guard (200..<300).contains(status) else {
             let message = Self.serverMessage(from: data)
             throw APIError.http(status: status, message: message)

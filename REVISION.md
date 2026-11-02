@@ -36,3 +36,9 @@ Backend NestJS + Prisma (`nodejs_space`) e iOS SwiftUI (`swift_space`). Revisado
 3. Throttling + CSPRNG para códigos (3, 5).
 4. Quitar `output` de Prisma (13) para poder compilar en otras máquinas.
 5. Transacciones/unicidad en grupos (7, 8, 14).
+
+---
+## Estado de correcciones (rama `fix/prioridad-alta`)
+Corregidos: 1 (seed lee `SEED_PASSWORD`; `.env` fuera del repo), 2 (`JWT_SECRET` obligatorio vía `ConfigService.getOrThrow`, sin fallback), 3 (`@nestjs/throttler`: signup 5/min, login 10/min, join 10/min, 120/min global), 4 (CORS restringido a `APP_ORIGIN`; Swagger solo si `NODE_ENV != production`), 5 (`crypto.randomInt`), 6 (401 con token → borra token y vuelve al login), 7, 8, 14 (unión/creación/salida de grupo atómicas, reintento ante P2002), 11, 12 (`ParseUUIDPipe`), 13 (sin `output`/`binaryTargets` de Abacus).
+Verificación: `prisma generate` y `tsc --noEmit` pasan. **No verificado**: ejecución contra una base real, y el cambio de Swift (no hay compilador Swift en este entorno).
+Pendiente: 9, 10, 15–22. Tras desplegar, rotar JWT_SECRET y la contraseña de la BD, y definir `SEED_PASSWORD` si usas el seed.

@@ -1,48 +1,59 @@
 import { Injectable, ConflictException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+import { randomInt } from 'crypto';
+import { Prisma } from '@prisma/client';
+
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function generateCode(): string {
   let code = '';
-  for (let i = 0; i < 6; i++) code += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+  for (let i = 0; i < 6; i++) code += CODE_CHARS[randomInt(CODE_CHARS.length)];
   return code;
 }
+
+const ALREADY_IN_GROUP = { statusCode: 409, message: 'Ya perteneces a un grupo', code: 'ALREADY_IN_GROUP' };
 
 @Injectable()
 export class FamilyGroupsService {
   constructor(private prisma: PrismaService) {}
 
   async create(userId: string, name: string) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (user?.familyGroupId) throw new ConflictException({ statusCode: 409, message: 'Ya perteneces a un grupo', code: 'ALREADY_IN_GROUP' });
-
-    let inviteCode = generateCode();
-    let attempts = 0;
-    while (attempts < 10) {
-      const exists = await this.prisma.familyGroup.findUnique({ where: { inviteCode } });
-      if (!exists) break;
-      inviteCode = generateCode();
-      attempts++;
+    // El código se genera dentro de la transacción y se reintenta si choca con el
+    // índice único (P2002), en vez de asumir que el último candidato es libre.
+    for (let attempt = 0; attempt < 10; attempt++) {
+      try {
+        const group = await this.prisma.$transaction(async (tx) => {
+          const claimed = await tx.user.updateMany({
+            where: { id: userId, familyGroupId: null },
+            data: {},
+          });
+          if (claimed.count === 0) throw new ConflictException(ALREADY_IN_GROUP);
+          const g = await tx.familyGroup.create({
+            data: { name: name.trim(), inviteCode: generateCode(), createdById: userId },
+          });
+          await tx.user.update({ where: { id: userId }, data: { familyGroupId: g.id } });
+          return g;
+        });
+        return this.getGroupDto(group.id);
+      } catch (e) {
+        if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') continue;
+        throw e;
+      }
     }
-
-    const group = await this.prisma.$transaction(async (tx) => {
-      const g = await tx.familyGroup.create({ data: { name: name.trim(), inviteCode, createdById: userId } });
-      await tx.user.update({ where: { id: userId }, data: { familyGroupId: g.id } });
-      return g;
-    });
-
-    return this.getGroupDto(group.id);
+    throw new ConflictException({ statusCode: 409, message: 'No se pudo generar un código, inténtalo de nuevo', code: 'CODE_GENERATION_FAILED' });
   }
 
   async join(userId: string, code: string) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (user?.familyGroupId) throw new ConflictException({ statusCode: 409, message: 'Ya perteneces a un grupo', code: 'ALREADY_IN_GROUP' });
-
     const normalizedCode = code.trim().toUpperCase();
     const group = await this.prisma.familyGroup.findUnique({ where: { inviteCode: normalizedCode } });
     if (!group) throw new NotFoundException({ statusCode: 404, message: 'Código no válido', code: 'INVALID_CODE' });
 
-    await this.prisma.user.update({ where: { id: userId }, data: { familyGroupId: group.id } });
+    // Atómico: solo se une si todavía no pertenece a ningún grupo.
+    const joined = await this.prisma.user.updateMany({
+      where: { id: userId, familyGroupId: null },
+      data: { familyGroupId: group.id },
+    });
+    if (joined.count === 0) throw new ConflictException(ALREADY_IN_GROUP);
     return this.getGroupDto(group.id);
   }
 
@@ -53,17 +64,14 @@ export class FamilyGroupsService {
   }
 
   async leave(userId: string) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user?.familyGroupId) throw new ForbiddenException({ statusCode: 403, message: 'No perteneces a ningún grupo', code: 'NO_FAMILY_GROUP' });
-
-    const groupId = user.familyGroupId;
-    await this.prisma.user.update({ where: { id: userId }, data: { familyGroupId: null } });
-
-    const remaining = await this.prisma.user.count({ where: { familyGroupId: groupId } });
-    if (remaining === 0) {
-      await this.prisma.familyGroup.delete({ where: { id: groupId } });
-    }
-
+    await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({ where: { id: userId } });
+      if (!user?.familyGroupId) throw new ForbiddenException({ statusCode: 403, message: 'No perteneces a ningún grupo', code: 'NO_FAMILY_GROUP' });
+      const groupId = user.familyGroupId;
+      await tx.user.update({ where: { id: userId }, data: { familyGroupId: null } });
+      const remaining = await tx.user.count({ where: { familyGroupId: groupId } });
+      if (remaining === 0) await tx.familyGroup.delete({ where: { id: groupId } });
+    });
     return { success: true };
   }
 
