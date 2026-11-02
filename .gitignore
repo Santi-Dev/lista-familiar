@@ -1,7 +1,13 @@
-node_modules/
-dist/
-.env
+# Xcode / XcodeGen (se generan con `xcodegen generate`)
 *.xcodeproj/
-Info.plist
-.DS_Store
+swift_space/Info.plist
+swift_space/build/
+DerivedData/
+
+# Capturas descargadas de CI
 previews/
+
+# Secretos y sistema
+.env
+*.p8
+.DS_Store
