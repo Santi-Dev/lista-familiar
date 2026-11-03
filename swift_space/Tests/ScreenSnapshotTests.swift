@@ -1,16 +1,17 @@
 import SnapshotTesting
 import SwiftUI
+import UIKit
 import XCTest
 @testable import FamilyShoppingLists
 
 /// Tests de snapshots de las pantallas, en claro y oscuro, con datos de `PreviewBackend` (sin red).
 /// Las imágenes de referencia viven en `Tests/__Snapshots__`. Para regenerarlas, lanza el workflow
 /// `snapshots` con `record = true` (ver docs/TESTS.md).
+///
+/// Cada pantalla se muestra en una `UIWindow` real, se espera a que terminen las cargas (`.task`)
+/// y se captura la jerarquía con `drawHierarchy`, de modo que el Liquid Glass se renderiza de verdad.
 @MainActor
 final class ScreenSnapshotTests: XCTestCase {
-    private let iPhone = ViewImageConfig.iPhone13Pro
-    private let smallPhone = ViewImageConfig.iPhoneSe
-
     override func setUp() {
         super.setUp()
         APIClient.shared = PreviewBackend()
@@ -21,29 +22,66 @@ final class ScreenSnapshotTests: XCTestCase {
         super.tearDown()
     }
 
-    // MARK: - Helper
+    // MARK: - Helpers
 
-    /// Renderiza la vista en claro y oscuro y compara con las referencias.
+    private enum Device {
+        /// Tamaño de pantalla del simulador.
+        case standard
+        /// Ancho de los iPhone más estrechos soportados (375 pt): para detectar textos cortados.
+        case narrow
+    }
+
+    private var scene: UIWindowScene? {
+        UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
+    }
+
+    private func size(for device: Device) -> CGSize {
+        let screen = scene?.screen.bounds.size ?? CGSize(width: 402, height: 874)
+        switch device {
+        case .standard: return screen
+        case .narrow: return CGSize(width: 375, height: screen.height)
+        }
+    }
+
+    /// Muestra la vista en una ventana real, espera a que cargue y devuelve la captura.
+    private func render<V: View>(_ view: V, size: CGSize, style: UIUserInterfaceStyle, wait: Duration) async -> UIImage {
+        let window: UIWindow
+        if let scene {
+            window = UIWindow(windowScene: scene)
+        } else {
+            window = UIWindow(frame: .zero)
+        }
+        window.frame = CGRect(origin: .zero, size: size)
+        window.overrideUserInterfaceStyle = style
+        window.rootViewController = UIHostingController(rootView: view.environment(SessionModel()))
+        window.makeKeyAndVisible()
+        defer { window.isHidden = true }
+
+        try? await Task.sleep(for: wait)
+
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 2
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
+        return renderer.image { _ in
+            window.drawHierarchy(in: CGRect(origin: .zero, size: size), afterScreenUpdates: true)
+        }
+    }
+
+    /// Captura la pantalla en claro y oscuro y compara con las referencias.
     private func assertScreen<V: View>(
         _ view: V,
-        config: ViewImageConfig,
-        named name: String = "screen",
-        wait: TimeInterval = 1.5,
+        device: Device = .standard,
+        wait: Duration = .seconds(2),
         file: StaticString = #filePath,
         testName: String = #function,
         line: UInt = #line
-    ) {
+    ) async {
         for (suffix, style) in [("light", UIUserInterfaceStyle.light), ("dark", .dark)] {
-            let host = UIHostingController(rootView: view.environment(SessionModel()))
-            host.overrideUserInterfaceStyle = style
+            let image = await render(view, size: size(for: device), style: style, wait: wait)
             assertSnapshot(
-                of: host,
-                as: .wait(
-                    for: wait,
-                    on: .image(on: config, precision: 0.98, perceptualPrecision: 0.98,
-                               traits: UITraitCollection(userInterfaceStyle: style))
-                ),
-                named: "\(name)-\(suffix)",
+                of: image,
+                as: .image(precision: 0.98, perceptualPrecision: 0.98),
+                named: "screen-\(suffix)",
                 file: file, testName: testName, line: line
             )
         }
@@ -51,30 +89,30 @@ final class ScreenSnapshotTests: XCTestCase {
 
     // MARK: - Autenticación
 
-    func testWelcome() { assertScreen(AuthFlowView(), config: iPhone) }
-    func testLogin() { assertScreen(NavigationStack { LoginView() }, config: iPhone) }
-    func testRegister() { assertScreen(NavigationStack { RegisterView() }, config: iPhone) }
-    func testFamilyGroupSetup() { assertScreen(FamilyGroupSetupView(), config: iPhone) }
+    func testWelcome() async { await assertScreen(AuthFlowView()) }
+    func testLogin() async { await assertScreen(NavigationStack { LoginView() }) }
+    func testRegister() async { await assertScreen(NavigationStack { RegisterView() }) }
+    func testFamilyGroupSetup() async { await assertScreen(FamilyGroupSetupView()) }
 
     // MARK: - Aplicación principal
 
-    func testListsHome() { assertScreen(MainTabView(), config: iPhone) }
-    func testListDetail() { assertScreen(NavigationStack { ListDetailView(listId: "l1") }, config: iPhone) }
-    func testSettings() { assertScreen(SettingsView(), config: iPhone) }
-    func testCreateListSheet() { assertScreen(CreateListSheet(onCreated: { _ in }), config: iPhone) }
-    func testItemFormSheet() {
-        assertScreen(ItemFormSheet(listId: "l1", preselectedCategory: .OTROS, onSaved: { _ in }), config: iPhone)
+    func testListsHome() async { await assertScreen(MainTabView()) }
+    func testListDetail() async { await assertScreen(NavigationStack { ListDetailView(listId: "l1") }) }
+    func testSettings() async { await assertScreen(SettingsView()) }
+    func testCreateListSheet() async { await assertScreen(CreateListSheet(onCreated: { _ in })) }
+    func testItemFormSheet() async {
+        await assertScreen(ItemFormSheet(listId: "l1", preselectedCategory: .OTROS, onSaved: { _ in }))
     }
 
     // MARK: - Títulos largos (regresión del título cortado)
 
-    func testListsHomeWithLongGroupName() {
+    func testListsHomeWithLongGroupName() async {
         APIClient.shared = PreviewBackend(groupName: "Familia García Rodríguez de la Fuente y Martínez")
-        assertScreen(MainTabView(), config: smallPhone)
+        await assertScreen(MainTabView(), device: .narrow)
     }
 
-    func testListDetailWithLongListName() {
+    func testListDetailWithLongListName() async {
         APIClient.shared = PreviewBackend(firstListName: "Compra grande del mes para toda la familia y la fiesta del domingo")
-        assertScreen(NavigationStack { ListDetailView(listId: "l1") }, config: smallPhone)
+        await assertScreen(NavigationStack { ListDetailView(listId: "l1") }, device: .narrow)
     }
 }

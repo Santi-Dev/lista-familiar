@@ -24,7 +24,11 @@ Añade un método en `ScreenSnapshotTests` que llame a `assertScreen(MiVista(), 
 Los ViewModels leen `APIClient.shared`, que los tests sustituyen por `PreviewBackend` (se puede configurar,
 por ejemplo `PreviewBackend(groupName: "…")`).
 
+### Cómo se captura
+Cada pantalla se muestra en una `UIWindow` real, se espera 2 s a que terminen las cargas (`.task`) y se captura con
+`drawHierarchy`, así que el **Liquid Glass se renderiza de verdad**. Las pantallas de título largo se prueban con un
+ancho de 375 pt (el iPhone más estrecho soportado).
+
 ### Limitaciones
 - La comparación admite un 2 % de diferencia (`precision` 0.98) para tolerar cambios de renderizado entre imágenes del runner.
-- El render por capas no reproduce el efecto Liquid Glass con total fidelidad: los snapshots protegen la **estructura**
-  (textos, truncados, espaciados); para el aspecto de cristal usa las capturas de `scripts/preview.sh`.
+- Si cambia la versión de Xcode o del simulador del runner, puede que haya que regenerar las referencias.
