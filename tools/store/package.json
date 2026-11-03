@@ -1,0 +1,12 @@
+{
+  "name": "lista-familiar-store-tools",
+  "private": true,
+  "type": "module",
+  "description": "Genera las imágenes del carrusel de la App Store (ver docs/APPSTORE.md)",
+  "scripts": {
+    "compose": "node compose.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "^1.49.0"
+  }
+}

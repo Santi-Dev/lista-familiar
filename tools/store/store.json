@@ -1,0 +1,11 @@
+{
+  "width": 1320,
+  "height": 2868,
+  "slides": [
+    { "screen": "welcome",   "title": "Haced la compra juntos",        "subtitle": "Una lista compartida para toda la familia" },
+    { "screen": "lists",     "title": "Todas vuestras listas, a mano",  "subtitle": "Mercado, fiestas, limpieza… cada una con su progreso" },
+    { "screen": "detail",    "title": "Marca lo que ya compraste",      "subtitle": "Todos ven los cambios al instante" },
+    { "screen": "item-form", "title": "Añade artículos en segundos",    "subtitle": "Con cantidad y categoría" },
+    { "screen": "settings",  "title": "Invita con un código",           "subtitle": "Tu familia se une en un momento" }
+  ]
+}

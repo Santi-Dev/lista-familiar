@@ -8,6 +8,9 @@ on:
       screens:
         description: "Pantallas separadas por espacios"
         default: "welcome login register family-setup lists detail settings create-list item-form"
+      device:
+        description: "Simulador (para capturas de la tienda: iPhone 17 Pro Max = 1320x2868)"
+        default: "iPhone 17"
 
 env:
   BUNDLE_ID: com.santidev.listafamiliar
@@ -40,7 +43,7 @@ jobs:
       - name: Capturas
         run: |
           APP=$(find swift_space/build/Build/Products -name "*.app" -maxdepth 3 | head -1)
-          UDID=$(xcrun simctl list devices available | grep -F "iPhone 17 (" | tail -1 | grep -oE "[0-9A-F-]{36}")
+          UDID=$(xcrun simctl list devices available | grep -F "${{ inputs.device || 'iPhone 17' }} (" | tail -1 | grep -oE "[0-9A-F-]{36}")
           echo "Simulador: $UDID  App: $APP"
           xcrun simctl boot "$UDID"
           xcrun simctl bootstatus "$UDID" -b

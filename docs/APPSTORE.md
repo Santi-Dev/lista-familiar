@@ -41,3 +41,13 @@ Camino: **cuenta de desarrollador → app en App Store Connect → build por Tes
 - El correo integrado de Supabase tiene un límite muy bajo y no está pensado para producción: configura un **SMTP propio**
   si añades recuperación de contraseña o confirmación de correo.
 - Revisa las políticas RLS cada vez que cambie el esquema (los snapshots no las cubren).
+
+## 5. Generar las imágenes de la tienda (desde Windows)
+1. **Capturar** en un iPhone 17 Pro Max (1320×2868, el único tamaño obligatorio). Actions → `ios-preview` → Run workflow, con
+   `device = iPhone 17 Pro Max` y `screens = welcome lists detail item-form settings`. Descarga el artefacto `ios-preview`
+   y copia los `*-light.png` a `tools/store/raw/`.
+   (Con `scripts/preview.sh` o `gh run download` también sirve.) En este modo las fechas de ejemplo son recientes ("hace 2 horas").
+2. **Componer el carrusel**: `cd tools/store && npm install && node compose.mjs` (usa el Edge o Chrome instalado).
+   Para la versión oscura: `node compose.mjs raw out-oscuro oscuro`.
+3. Los textos de cada diapositiva están en `tools/store/store.json`. Salen en `tools/store/out/*.jpg`, a 1320×2868 y sin
+   transparencia, listas para arrastrar a App Store Connect (Versión → Capturas de pantalla → iPhone 6,9").

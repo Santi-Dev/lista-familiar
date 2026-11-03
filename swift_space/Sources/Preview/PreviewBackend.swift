@@ -6,13 +6,21 @@ struct PreviewBackend: Backend {
     var groupName = "Familia García"
     var firstListName = "Mercado semanal"
 
-    private static let now = "2026-01-15T10:00:00.000Z"
+    /// En las capturas (`-PREVIEW_SCREEN`) las fechas son recientes ("hace 2 horas"); en los tests son fijas para que los snapshots no cambien.
+    static var useRecentDates = false
+    private static var now: String { useRecentDates ? iso(hoursAgo: 2) : "2026-01-15T10:00:00.000Z" }
+    private static func iso(hoursAgo: Double) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: Date().addingTimeInterval(-hoursAgo * 3600))
+    }
     private static let lucia = UserPublicDto(id: "u1", name: "Lucía")
     private static var luciaJSON: JSONValue { .object(["id": .string("u1"), "name": .string("Lucía")]) }
 
-    private static func list(_ id: String, _ name: String, _ total: Double, _ done: Double) -> ShoppingListSummaryDto {
-        ShoppingListSummaryDto(id: id, name: name, isArchived: false, createdBy: luciaJSON,
-                               itemCount: total, purchasedCount: done, createdAt: now, updatedAt: now)
+    private static func list(_ id: String, _ name: String, _ total: Double, _ done: Double, hoursAgo: Double = 2) -> ShoppingListSummaryDto {
+        let updated = useRecentDates ? iso(hoursAgo: hoursAgo) : now
+        return ShoppingListSummaryDto(id: id, name: name, isArchived: false, createdBy: luciaJSON,
+                               itemCount: total, purchasedCount: done, createdAt: now, updatedAt: updated)
     }
 
     private static func item(_ id: String, _ name: String, _ qty: String, _ cat: String, _ bought: Bool) -> ListItemDto {
@@ -44,8 +52,8 @@ struct PreviewBackend: Backend {
         if archived == "true" { return ListsResponseDto(items: []) }
         return ListsResponseDto(items: [
             Self.list("l1", firstListName, 6, 2),
-            Self.list("l2", "Cumpleaños de Marta", 4, 0),
-            Self.list("l3", "Limpieza del hogar", 3, 3),
+            Self.list("l2", "Cumpleaños de Marta", 4, 0, hoursAgo: 26),
+            Self.list("l3", "Limpieza del hogar", 3, 3, hoursAgo: 74),
         ])
     }
     func create(body: CreateListDto) async throws -> ShoppingListSummaryDto { Self.list("l9", body.name, 0, 0) }
