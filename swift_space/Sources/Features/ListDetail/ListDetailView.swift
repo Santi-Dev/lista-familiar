@@ -26,17 +26,9 @@ struct ListDetailView: View {
         }
         .safeAreaInset(edge: .bottom) { addButton }
         .background(Theme.Colors.background.ignoresSafeArea())
-        .navigationTitle(vm.listInfo?.name ?? "Lista")
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .principal) {
-                Text(vm.listInfo?.name ?? "Lista")
-                    .font(.headline)
-                    .fontDesign(.rounded)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
-                    .minimumScaleFactor(0.85)
-            }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button { renameText = vm.listInfo?.name ?? ""; showRenameAlert = true } label: {
@@ -93,6 +85,15 @@ struct ListDetailView: View {
         } else {
             VStack(spacing: 0) {
                 if let info = vm.listInfo {
+                    Text(info.name)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .fontDesign(.rounded)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                        .lineLimit(3)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, Theme.Spacing.lg)
+                        .padding(.top, Theme.Spacing.sm)
                     HStack {
                         Text("\(Int(info.purchasedCount))/\(Int(info.itemCount)) comprados")
                             .font(.subheadline)
@@ -101,7 +102,7 @@ struct ListDetailView: View {
                         Spacer()
                     }
                     .padding(.horizontal, Theme.Spacing.lg)
-                    .padding(.top, Theme.Spacing.sm)
+                    .padding(.top, Theme.Spacing.xs)
 
                     if info.isArchived {
                         HStack {

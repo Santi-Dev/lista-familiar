@@ -32,3 +32,6 @@ ancho de 375 pt (el iPhone más estrecho soportado).
 ### Limitaciones
 - La comparación admite un 2 % de diferencia (`precision` 0.98) para tolerar cambios de renderizado entre imágenes del runner.
 - Si cambia la versión de Xcode o del simulador del runner, puede que haya que regenerar las referencias.
+
+### Regenerar todas las referencias
+Si prefieres no usar el botón, borra `swift_space/Tests/__Snapshots__` y sube el cambio: sin referencias, el workflow las vuelve a grabar.
