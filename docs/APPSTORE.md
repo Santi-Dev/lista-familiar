@@ -47,7 +47,7 @@ Nota: a partir de abril de 2027 Apple pedirá también capturas "iPhone Duo" par
 ### Requisitos de la app (estado)
 | Requisito | Estado | Detalle |
 |---|---|---|
-| **Borrar la cuenta desde la app** (guideline 5.1.1(v)) | Código listo; falta aplicar la migración | Ajustes → "Eliminar mi cuenta" + `supabase/migrations/003_delete_account.sql`. **Hay que aplicar la migración en producción** (`npx.cmd supabase db push --remote`). Las pruebas corren en CI sobre un Supabase local (`backend-tests`) |
+| **Borrar la cuenta desde la app** (guideline 5.1.1(v)) | Hecho (migración 003 aplicada en producción) | Ajustes → "Eliminar mi cuenta" + `supabase/migrations/003_delete_account.sql`. Aplicada con `npx.cmd supabase db push --remote`. Las pruebas corren en CI sobre un Supabase local (`backend-tests`) |
 | **Manifiesto de privacidad** | Hecho | `swift_space/Sources/App/PrivacyInfo.xcprivacy` (sin rastreo; correo, nombre, ID de usuario y listas, para el funcionamiento de la app). Si App Store Connect avisa de alguna API de "razón requerida" tras subir a TestFlight, se añade aquí |
 | **Política de privacidad y URL de soporte** | Borradores listos en `site/` | Falta tu correo de contacto y activar GitHub Pages (workflow `pages`) |
 | Cifrado de exportación | Hecho | `ITSAppUsesNonExemptEncryption = false` |
@@ -97,7 +97,7 @@ Nota: a partir de abril de 2027 Apple pedirá también capturas "iPhone Duo" par
 1. **Correo de contacto público**: hecho, `santiagomecatronica@gmail.com` (aparece en `site/` al publicar GitHub Pages).
 2. **Activar GitHub Pages**: repo → Settings → Pages → Source: *GitHub Actions*; luego Actions → `pages` → Run workflow.
    La URL será `https://santi-dev.github.io/lista-familiar/` (soporte) y `.../privacidad.html`.
-3. **Aplicar la migración del borrado de cuenta** en producción (tras ver `backend-tests` en verde).
+3. ~~Aplicar la migración del borrado de cuenta en producción~~ Hecho: 003 aplicada y verificada.
 4. **Crear la cuenta de demostración** en la app: regístrate con un correo y contraseña que no vayas a cambiar, crea el grupo
    "Familia Demo" y 2 o 3 listas con artículos. Apunta esos datos para "Información de revisión".
 5. **Apple**: cuenta aprobada → registrar el bundle ID → crear la app → 4 secrets en GitHub → lanzar `testflight`.
