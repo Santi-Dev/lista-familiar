@@ -9,6 +9,9 @@ packages:
   Supabase:
     url: https://github.com/supabase/supabase-swift
     from: 2.20.0
+  SnapshotTesting:
+    url: https://github.com/pointfreeco/swift-snapshot-testing
+    from: 1.17.0
 targets:
   FamilyShoppingLists:
     type: application
@@ -35,3 +38,31 @@ targets:
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         ITSAppUsesNonExemptEncryption: false
+  FamilyShoppingListsTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: Tests
+        excludes:
+          - "__Snapshots__/**"
+    dependencies:
+      - target: FamilyShoppingLists
+      - package: SnapshotTesting
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.santidev.listafamiliar.tests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  FamilyShoppingLists:
+    build:
+      targets:
+        FamilyShoppingLists: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - FamilyShoppingListsTests
+    archive:
+      config: Release

@@ -1,0 +1,97 @@
+name: snapshots
+
+# Tests de snapshots de las pantallas (claro/oscuro, nombres largos). Ver docs/TESTS.md.
+# - Si no hay imágenes de referencia, o se lanza con record=true, las graba y las sube a la rama.
+# - En cualquier otro caso compara contra las referencias y falla si hay diferencias.
+on:
+  push:
+    paths: ["swift_space/**", ".github/workflows/snapshots.yml"]
+  pull_request:
+    paths: ["swift_space/**", ".github/workflows/snapshots.yml"]
+  workflow_dispatch:
+    inputs:
+      record:
+        description: "Regenerar las imágenes de referencia"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: snapshots-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar XcodeGen
+        run: brew install xcodegen
+
+      - name: Generar proyecto
+        working-directory: swift_space
+        run: xcodegen generate
+
+      - name: Decidir modo
+        id: mode
+        run: |
+          if [ "${{ inputs.record }}" = "true" ] || [ ! -d swift_space/Tests/__Snapshots__ ]; then
+            echo "record=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "record=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Ejecutar tests
+        working-directory: swift_space
+        run: |
+          UDID=$(xcrun simctl list devices available | grep -F "iPhone 17 (" | tail -1 | grep -oE "[0-9A-F-]{36}")
+          echo "Simulador: $UDID"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          mkdir -p "$RUNNER_TEMP/snapshot-artifacts"
+          export TEST_RUNNER_SNAPSHOT_ARTIFACTS="$RUNNER_TEMP/snapshot-artifacts"
+          if [ "${{ steps.mode.outputs.record }}" = "true" ]; then
+            export TEST_RUNNER_SNAPSHOT_TESTING_RECORD=all
+          fi
+          xcodebuild test \
+            -project FamilyShoppingLists.xcodeproj -scheme FamilyShoppingLists \
+            -destination "platform=iOS Simulator,id=$UDID" \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$RUNNER_TEMP/test.log"
+          code=${PIPESTATUS[0]}
+          if [ "${{ steps.mode.outputs.record }}" = "true" ]; then
+            # Al grabar, la librería marca los tests como fallidos: es lo esperado.
+            exit 0
+          fi
+          exit $code
+
+      - name: Comprobar que se grabaron imágenes
+        if: steps.mode.outputs.record == 'true'
+        run: |
+          n=$(find swift_space/Tests/__Snapshots__ -name '*.png' 2>/dev/null | wc -l)
+          echo "Imágenes grabadas: $n"
+          if [ "$n" -eq 0 ]; then grep -E "error:" "$RUNNER_TEMP/test.log" | sort -u | head -20; exit 1; fi
+
+      - name: Subir referencias a la rama
+        if: steps.mode.outputs.record == 'true' && github.event_name != 'pull_request'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add swift_space/Tests/__Snapshots__
+          if git diff --cached --quiet; then echo "Sin cambios"; else
+            git commit -m "Actualizar snapshots de referencia [skip ci]"
+            git push
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: snapshots
+          path: |
+            swift_space/Tests/__Snapshots__
+            ${{ runner.temp }}/snapshot-artifacts
+            ${{ runner.temp }}/test.log
+          if-no-files-found: ignore

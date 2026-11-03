@@ -37,5 +37,6 @@ protocol Backend: Sendable {
 }
 
 enum APIClient {
-    static let shared: any Backend = PreviewMode.screen != nil ? PreviewBackend() : SupabaseBackend()
+    /// `var` para poder sustituirlo en los tests (por ejemplo por `PreviewBackend`).
+    static var shared: any Backend = PreviewMode.screen != nil ? PreviewBackend() : SupabaseBackend()
 }

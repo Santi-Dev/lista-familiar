@@ -29,6 +29,14 @@ struct ListDetailView: View {
         .navigationTitle(vm.listInfo?.name ?? "Lista")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text(vm.listInfo?.name ?? "Lista")
+                    .font(.headline)
+                    .fontDesign(.rounded)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .minimumScaleFactor(0.85)
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button { renameText = vm.listInfo?.name ?? ""; showRenameAlert = true } label: {

@@ -15,6 +15,7 @@ Lee `README.md` (visión general) y `docs/ARCHITECTURE.md` (MVVM) antes de tocar
 - Nunca poner la clave `service_role` ni secretos (`.p8`) en el repo. La clave `anon` es pública y está en `AppConfig.swift`.
 
 ## Verificación de UI (sin Mac)
+- Tests de snapshots: ver `docs/TESTS.md` (workflow `snapshots`).
 - `bash scripts/preview.sh [pantallas]` empuja la rama, lanza `ios-preview` (runner macOS, build para simulador iOS) y baja los PNG a
   `previews/run-<id>/ios-preview/` (`<pantalla>-light.png`, `<pantalla>-dark.png`; `errors.txt` si falla).
 - Pantallas: welcome login register family-setup lists detail settings create-list item-form.

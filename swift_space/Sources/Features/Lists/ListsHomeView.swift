@@ -14,7 +14,7 @@ struct ListsHomeView: View {
         NavigationStack(path: $navPath) {
             mainContent
             .background(Theme.Colors.background.ignoresSafeArea())
-            .navigationTitle(vm.group?.name ?? "Mis Listas")
+            .navigationTitle("Mis listas")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -52,13 +52,21 @@ struct ListsHomeView: View {
     @ViewBuilder
     private var mainContent: some View {
         VStack(spacing: 0) {
-            if let memberCount = vm.group?.members.count {
-                Text("\(memberCount) miembros")
-                    .font(.caption)
-                    .fontDesign(.rounded)
-                    .foregroundColor(Theme.Colors.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, Theme.Spacing.lg)
+            if let group = vm.group {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(group.name)
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                        .fontDesign(.rounded)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                        .lineLimit(2)
+                    Text("\(group.members.count) miembros")
+                        .font(.caption)
+                        .fontDesign(.rounded)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, Theme.Spacing.lg)
             }
             Picker("", selection: $vm.showArchived) {
                 Text("Activas").tag(false)
