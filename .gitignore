@@ -11,3 +11,7 @@ previews/
 .env
 *.p8
 .DS_Store
+*.ipa
+ipa/
+supabase/.temp/
+supabase/.branches/
