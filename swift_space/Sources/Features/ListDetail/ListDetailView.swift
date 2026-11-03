@@ -130,7 +130,7 @@ struct ListDetailView: View {
                     if vm.selectedCategory != nil {
                         EmptyStateView(icon: "magnifyingglass", title: "No hay artículos en \(vm.selectedCategory!.label)", subtitle: "")
                     } else {
-                        EmptyStateView(icon: "basket", title: "La lista está vacía", subtitle: "Añade lo que necesitáis comprar.", buttonTitle: "Añadir artículo") {
+                        EmptyStateView(icon: "basket", title: "La lista está vacía", subtitle: "Añade lo que necesitas comprar.", buttonTitle: "Añadir artículo") {
                             showAddSheet = true
                         }
                     }

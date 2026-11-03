@@ -29,7 +29,7 @@ struct WelcomeView: View {
             Text("Lista Familiar")
                 .font(.system(size: 34, weight: .bold, design: .rounded))
                 .foregroundColor(Theme.Colors.textPrimary)
-            Text("Haced la compra juntos. Una lista compartida para toda la familia, siempre al día.")
+            Text("Todas tus compras en una sola lista, compartida con tu familia y siempre al día.")
                 .font(.body)
                 .fontDesign(.rounded)
                 .foregroundColor(Theme.Colors.textSecondary)

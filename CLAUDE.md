@@ -4,7 +4,7 @@ Lee `README.md` (visión general) y `docs/ARCHITECTURE.md` (MVVM) antes de tocar
 
 ## Proyecto
 - App iOS 18+, SwiftUI, **MVVM** con `@Observable`. Backend: **Supabase** (Auth, Postgres+RLS, Realtime). Sin servidor propio.
-- **Todos los textos de la interfaz en español.** Código y nombres en inglés.
+- **Todos los textos de la interfaz en español, en tono de «tú»** (cercano y personal: «tus compras», «añade», «invita a tu familia»; nunca «vosotros»: «haced», «vuestra», «necesitáis»). Código y nombres en inglés.
 - Tema verde de supermercado: marca #2E7D4F, acento #E07A2E, tipografía SF Pro Rounded. Usar siempre `Theme` (se adapta a modo oscuro).
 - Categorías: FRUTAS_VERDURAS, LACTEOS_HUEVOS, CARNES_PESCADO, PANADERIA, LIMPIEZA, BEBIDAS, DESPENSA, OTROS.
 

@@ -33,7 +33,7 @@ else { MainTabView() }
 - Layout, top to bottom:
   - Large illustration: a grid of SF Symbols in a soft circle (`carrot.fill`, `cart.fill`, `basket.fill`), tinted brand and accent.
   - Display title "Lista Familiar".
-  - Body text "Haced la compra juntos. Una lista compartida para toda la familia, siempre al día."
+  - Body text "Todas tus compras en una sola lista, compartida con tu familia y siempre al día."
 - Buttons at the bottom:
   - Primary "Crear cuenta" → push RegisterView.
   - Secondary "Ya tengo cuenta · Iniciar sesión" → push LoginView.
@@ -150,7 +150,7 @@ TabView with two tabs, each with its own NavigationStack:
 - Archived list: shows a banner "Lista archivada" with a "Desarchivar" button. Items remain editable.
 - Empty state:
   - Icon `basket`
-  - "La lista está vacía" and "Añade lo que necesitáis comprar."
+  - "La lista está vacía" and "Añade lo que necesitas comprar."
   - Button "Añadir artículo"
 - Filter yields nothing: "No hay artículos en {categoría}".
 - Loading: skeleton rows. Error: "No se pudo cargar la lista" with "Reintentar".

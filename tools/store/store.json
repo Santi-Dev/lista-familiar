@@ -2,10 +2,10 @@
   "width": 1320,
   "height": 2868,
   "slides": [
-    { "screen": "welcome",   "title": "Haced la compra juntos",        "subtitle": "Una lista compartida para toda la familia" },
-    { "screen": "lists",     "title": "Todas vuestras listas, a mano",  "subtitle": "Mercado, fiestas, limpieza… cada una con su progreso" },
-    { "screen": "detail",    "title": "Marca lo que ya compraste",      "subtitle": "Todos ven los cambios al instante" },
-    { "screen": "item-form", "title": "Añade artículos en segundos",    "subtitle": "Con cantidad y categoría" },
-    { "screen": "settings",  "title": "Invita con un código",           "subtitle": "Tu familia se une en un momento" }
+    { "screen": "welcome",   "title": "Todas tus compras, en un solo lugar", "subtitle": "Una lista compartida con tu familia" },
+    { "screen": "lists",     "title": "Tus listas, siempre a mano",          "subtitle": "Mercado, fiestas, limpieza… cada una con su progreso" },
+    { "screen": "detail",    "title": "Marca lo que ya compraste",           "subtitle": "Tu familia lo ve al instante" },
+    { "screen": "item-form", "title": "Añade tus productos en segundos",     "subtitle": "Con cantidad y categoría" },
+    { "screen": "settings",  "title": "Invita a tu familia con un código",   "subtitle": "Se une en un momento" }
   ]
 }
