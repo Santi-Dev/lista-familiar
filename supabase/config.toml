@@ -1,0 +1,7 @@
+# Solo se declaran las propiedades que gestionamos desde el repositorio;
+# `supabase config push` deja intacto todo lo que no aparece aquí.
+project_id = "rxvqsvjbtteejrrzfpoh"
+
+[auth.email]
+# Sin confirmación por correo: el registro inicia sesión directamente.
+enable_confirmations = false

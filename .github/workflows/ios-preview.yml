@@ -15,7 +15,7 @@ env:
 
 jobs:
   preview:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -40,7 +40,7 @@ jobs:
       - name: Capturas
         run: |
           APP=$(find swift_space/build/Build/Products -name "*.app" -maxdepth 3 | head -1)
-          UDID=$(xcrun simctl list devices available | grep -E "iPhone 1[5-7]( Pro)? \(" | head -1 | grep -oE "[0-9A-F-]{36}")
+          UDID=$(xcrun simctl list devices available | grep -F "iPhone 17 (" | tail -1 | grep -oE "[0-9A-F-]{36}")
           echo "Simulador: $UDID  App: $APP"
           xcrun simctl boot "$UDID"
           xcrun simctl bootstatus "$UDID" -b

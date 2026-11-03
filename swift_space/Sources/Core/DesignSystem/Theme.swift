@@ -36,6 +36,72 @@ enum Theme {
     }
 }
 
+// MARK: - Liquid Glass (iOS 26+) con alternativa clásica para iOS 18-25
+
+extension View {
+    /// Botón principal: cristal tintado de marca en iOS 26+, relleno sólido antes.
+    @ViewBuilder
+    func primaryControlSurface(interactive: Bool = true) -> some View {
+        let base = self
+            .font(.headline)
+            .fontDesign(.rounded)
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 52)
+        if #available(iOS 26, *) {
+            base.glassEffect(.regular.tint(Theme.Colors.brand).interactive(interactive), in: Capsule())
+        } else {
+            base
+                .background(Theme.Colors.brand)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.Radii.button))
+        }
+    }
+
+    /// Botón secundario: cristal neutro en iOS 26+, superficie con borde antes.
+    @ViewBuilder
+    func secondaryControlSurface(interactive: Bool = true) -> some View {
+        let base = self
+            .font(.headline)
+            .fontDesign(.rounded)
+            .foregroundStyle(Theme.Colors.brand)
+            .frame(maxWidth: .infinity)
+            .frame(height: 52)
+        if #available(iOS 26, *) {
+            base.glassEffect(.regular.interactive(interactive), in: Capsule())
+        } else {
+            base
+                .background(Theme.Colors.surface)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.Radii.button))
+                .overlay(RoundedRectangle(cornerRadius: Theme.Radii.button).stroke(Theme.Colors.brand, lineWidth: 1))
+        }
+    }
+
+    /// Chip de filtro: cristal (tintado si está seleccionado) en iOS 26+.
+    @ViewBuilder
+    func chipSurface(isSelected: Bool) -> some View {
+        if #available(iOS 26, *) {
+            self
+                .foregroundStyle(isSelected ? Color.white : Theme.Colors.textPrimary)
+                .glassEffect(isSelected ? .regular.tint(Theme.Colors.brand).interactive() : .regular.interactive(), in: Capsule())
+        } else {
+            self
+                .foregroundStyle(isSelected ? Color.white : Theme.Colors.textPrimary)
+                .background(Capsule().fill(isSelected ? Theme.Colors.brand : Theme.Colors.surface))
+                .overlay(Capsule().stroke(isSelected ? Color.clear : Theme.Colors.separator, lineWidth: 0.5))
+        }
+    }
+
+    /// Superficie flotante (avisos, barras): cristal en iOS 26+, material antes.
+    @ViewBuilder
+    func floatingSurface<S: Shape>(in shape: S) -> some View {
+        if #available(iOS 26, *) {
+            self.glassEffect(.regular, in: shape)
+        } else {
+            self.background(.regularMaterial, in: shape)
+        }
+    }
+}
+
 struct PrimaryButtonStyle: ButtonStyle {
     var isLoading = false
     func makeBody(configuration: Configuration) -> some View {
@@ -45,29 +111,15 @@ struct PrimaryButtonStyle: ButtonStyle {
             }
             configuration.label
         }
-        .font(.headline)
-        .fontDesign(.rounded)
-        .foregroundColor(.white)
-        .frame(maxWidth: .infinity)
-        .frame(height: 52)
-        .background(Theme.Colors.brand)
-        .cornerRadius(Theme.Radii.button)
+        .primaryControlSurface()
         .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
-        .opacity(configuration.isPressed ? 0.9 : 1.0)
     }
 }
 
 struct SecondaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.headline)
-            .fontDesign(.rounded)
-            .foregroundColor(Theme.Colors.brand)
-            .frame(maxWidth: .infinity)
-            .frame(height: 52)
-            .background(Theme.Colors.surface)
-            .cornerRadius(Theme.Radii.button)
-            .overlay(RoundedRectangle(cornerRadius: Theme.Radii.button).stroke(Theme.Colors.brand, lineWidth: 1))
+            .secondaryControlSurface()
             .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
     }
 }

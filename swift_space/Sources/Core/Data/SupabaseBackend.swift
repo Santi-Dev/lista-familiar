@@ -93,7 +93,8 @@ final class SupabaseBackend: Backend, @unchecked Sendable {
 
     private static let listSelect = "id,name,is_archived,created_at,updated_at,created_by:profiles!created_by_id(id,name),list_items(is_purchased)"
     private static let itemSelect = "id,shopping_list_id,name,quantity,category,is_purchased,purchased_at,created_at,updated_at,added_by:profiles!added_by_id(id,name),purchased_by:profiles!purchased_by_id(id,name)"
-    private static let groupSelect = "id,name,invite_code,created_by_id,created_at,members:profiles(id,name)"
+    // `family_groups` y `profiles` tienen dos relaciones (miembros y creador): el hint evita PGRST201.
+    private static let groupSelect = "id,name,invite_code,created_by_id,created_at,members:profiles!family_group_id(id,name)"
 
     // MARK: - Errores
 
