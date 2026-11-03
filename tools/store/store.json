@@ -1,6 +1,10 @@
 {
-  "width": 1320,
-  "height": 2868,
+  "baseWidth": 1320,
+  "baseHeight": 2868,
+  "sizes": [
+    { "name": "iphone-6.9", "width": 1320, "height": 2868 },
+    { "name": "iphone-6.3", "width": 1206, "height": 2622 }
+  ],
   "slides": [
     { "screen": "welcome",   "title": "Todas tus compras, en un solo lugar", "subtitle": "Una lista compartida con tu familia" },
     { "screen": "lists",     "title": "Tus listas, siempre a mano",          "subtitle": "Mercado, fiestas, limpieza… cada una con su progreso" },

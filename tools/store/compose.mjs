@@ -1,8 +1,8 @@
 // Compone las imágenes del carrusel de la App Store: captura de la app + titular sobre fondo de marca.
 // Uso: node compose.mjs [carpetaCapturas=raw] [carpetaSalida=out] [claro|oscuro=claro]
-// Entrada: <carpetaCapturas>/<pantalla>-light.png (o -dark.png), tal como las genera el workflow ios-preview
-//          con device = "iPhone 17 Pro Max" (1320x2868).
-// Salida:  <carpetaSalida>/NN-<pantalla>.jpg a 1320x2868, sin transparencia (requisito de App Store Connect).
+// Entrada: <carpetaCapturas>/<pantalla>-light.png (o -dark.png), las que genera el workflow ios-preview.
+// Salida:  <carpetaSalida>/<tamaño>/NN-<pantalla>.jpg para cada tamaño de store.json (iPhone 6,9" y 6,3"),
+//          sin transparencia (requisito de App Store Connect).
 import { chromium } from "playwright-core";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -13,7 +13,6 @@ const rawDir = resolve(here, process.argv[2] ?? "raw");
 const outDir = resolve(here, process.argv[3] ?? "out");
 const mode = (process.argv[4] ?? "claro") === "oscuro" ? "dark" : "light";
 const config = JSON.parse(readFileSync(join(here, "store.json"), "utf8"));
-mkdirSync(outDir, { recursive: true });
 
 // Navegador instalado en el sistema (Edge en Windows, Chrome si no): no hace falta descargar Chromium.
 const candidates = [
@@ -27,13 +26,16 @@ const executablePath = candidates.find(existsSync);
 if (!executablePath) throw new Error("No encuentro Edge ni Chrome instalados.");
 
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+const { baseWidth: BW, baseHeight: BH } = config;
 
-const html = ({ title, subtitle, dataUrl }) => `<!doctype html><html lang="es"><head><meta charset="utf-8">
+// El diseño se dibuja a 1320x2868 y se escala (ligeramente distinto en cada eje) al tamaño exacto pedido por Apple.
+const html = ({ title, subtitle, dataUrl, width, height }) => `<!doctype html><html lang="es"><head><meta charset="utf-8">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
 <style>
-  :root { --w: ${config.width}px; --h: ${config.height}px; }
   * { box-sizing: border-box; margin: 0; }
-  body { width: var(--w); height: var(--h); overflow: hidden; position: relative;
+  html, body { width: ${width}px; height: ${height}px; overflow: hidden; background: #1c573a; }
+  .stage { position: absolute; left: 0; top: 0; width: ${BW}px; height: ${BH}px; overflow: hidden;
+    transform-origin: 0 0; transform: scale(${width / BW}, ${height / BH});
     font-family: "Nunito", ui-rounded, "Segoe UI Variable", system-ui, sans-serif; color: #fff;
     background: radial-gradient(1200px 900px at 85% 8%, rgba(255,255,255,.20), transparent 60%),
                 linear-gradient(165deg, #3d9c66 0%, #2E7D4F 48%, #1c573a 100%); }
@@ -46,25 +48,30 @@ const html = ({ title, subtitle, dataUrl }) => `<!doctype html><html lang="es"><
   .phone { position: absolute; left: 160px; top: 800px; width: 1000px; border-radius: 128px; overflow: hidden;
     background: #000; box-shadow: 0 0 0 16px #101010, 0 0 0 20px #3a3a3c, 0 70px 140px rgba(0,0,0,.45); }
   .phone img { display: block; width: 100%; }
-</style></head><body>
+</style></head><body><div class="stage">
   <div class="dot d1"></div><div class="dot d2"></div>
   <header><h1>${esc(title)}</h1><p>${esc(subtitle)}</p></header>
   <div class="phone"><img src="${dataUrl}"></div>
-</body></html>`;
+</div></body></html>`;
 
 const browser = await chromium.launch({ executablePath, headless: true });
-const page = await browser.newPage({ viewport: { width: config.width, height: config.height }, deviceScaleFactor: 1 });
 
-let n = 0;
-for (const slide of config.slides) {
-  n += 1;
-  const src = join(rawDir, `${slide.screen}-${mode}.png`);
-  if (!existsSync(src)) { console.warn(`Falta ${src}, se omite`); continue; }
-  const dataUrl = `data:image/png;base64,${readFileSync(src).toString("base64")}`;
-  await page.setContent(html({ ...slide, dataUrl }), { waitUntil: "networkidle" });
-  await page.evaluate(() => document.fonts.ready);
-  const out = join(outDir, `${String(n).padStart(2, "0")}-${slide.screen}.jpg`);
-  await page.screenshot({ path: out, type: "jpeg", quality: 96, clip: { x: 0, y: 0, width: config.width, height: config.height } });
-  console.log("OK", out);
+for (const size of config.sizes) {
+  const dir = join(outDir, size.name);
+  mkdirSync(dir, { recursive: true });
+  const page = await browser.newPage({ viewport: { width: size.width, height: size.height }, deviceScaleFactor: 1 });
+  let n = 0;
+  for (const slide of config.slides) {
+    n += 1;
+    const src = join(rawDir, `${slide.screen}-${mode}.png`);
+    if (!existsSync(src)) { console.warn(`Falta ${src}, se omite`); continue; }
+    const dataUrl = `data:image/png;base64,${readFileSync(src).toString("base64")}`;
+    await page.setContent(html({ ...slide, dataUrl, width: size.width, height: size.height }), { waitUntil: "networkidle" });
+    await page.evaluate(() => document.fonts.ready);
+    const out = join(dir, `${String(n).padStart(2, "0")}-${slide.screen}.jpg`);
+    await page.screenshot({ path: out, type: "jpeg", quality: 96, clip: { x: 0, y: 0, width: size.width, height: size.height } });
+    console.log("OK", `${size.name}/${String(n).padStart(2, "0")}-${slide.screen}.jpg`, `${size.width}x${size.height}`);
+  }
+  await page.close();
 }
 await browser.close();
