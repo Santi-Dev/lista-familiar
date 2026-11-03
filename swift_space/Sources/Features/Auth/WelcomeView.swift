@@ -39,24 +39,11 @@ struct WelcomeView: View {
             VStack(spacing: Theme.Spacing.sm) {
                 NavigationLink(destination: RegisterView()) {
                     Text("Crear cuenta")
-                        .font(.headline)
-                        .fontDesign(.rounded)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                        .background(Theme.Colors.brand)
-                        .cornerRadius(Theme.Radii.button)
+                        .primaryControlSurface(interactive: false)
                 }
                 NavigationLink(destination: LoginView()) {
                     Text("Ya tengo cuenta · Iniciar sesión")
-                        .font(.headline)
-                        .fontDesign(.rounded)
-                        .foregroundColor(Theme.Colors.brand)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                        .background(Theme.Colors.surface)
-                        .cornerRadius(Theme.Radii.button)
-                        .overlay(RoundedRectangle(cornerRadius: Theme.Radii.button).stroke(Theme.Colors.brand, lineWidth: 1))
+                        .secondaryControlSurface(interactive: false)
                 }
             }
             .padding(.horizontal, Theme.Spacing.lg)

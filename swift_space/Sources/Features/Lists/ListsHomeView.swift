@@ -12,13 +12,18 @@ struct ListsHomeView: View {
 
     var body: some View {
         NavigationStack(path: $navPath) {
-            ZStack(alignment: .bottomTrailing) {
-                mainContent
-                fab
-            }
+            mainContent
             .background(Theme.Colors.background.ignoresSafeArea())
             .navigationTitle(vm.group?.name ?? "Mis Listas")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showCreateSheet = true } label: {
+                        Label("Nueva lista", systemImage: "plus")
+                    }
+                    .tint(Theme.Colors.brand)
+                }
+            }
             .navigationDestination(for: String.self) { listId in
                 ListDetailView(listId: listId)
             }
@@ -87,7 +92,6 @@ struct ListsHomeView: View {
                         }
                     }
                     .padding(Theme.Spacing.lg)
-                    .padding(.bottom, 80)
                 }
             }
         }
@@ -140,19 +144,6 @@ struct ListsHomeView: View {
                 Label("Eliminar", systemImage: "trash")
             }
         }
-    }
-
-    private var fab: some View {
-        Button { showCreateSheet = true } label: {
-            Image(systemName: "plus")
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-                .frame(width: 56, height: 56)
-                .background(Circle().fill(Theme.Colors.brand))
-                .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 4)
-        }
-        .padding(Theme.Spacing.lg)
     }
 
     private var skeletonCards: some View {

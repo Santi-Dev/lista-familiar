@@ -63,7 +63,6 @@ struct ItemFormSheet: View {
                 }
                 .padding(Theme.Spacing.lg)
             }
-            .background(Theme.Colors.background.ignoresSafeArea())
             .navigationTitle(vm.isEdit ? "Editar artículo" : "Nuevo artículo")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

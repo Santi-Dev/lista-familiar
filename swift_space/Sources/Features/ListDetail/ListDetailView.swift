@@ -22,9 +22,9 @@ struct ListDetailView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             mainContent
-            addButton
             toastOverlay
         }
+        .safeAreaInset(edge: .bottom) { addButton }
         .background(Theme.Colors.background.ignoresSafeArea())
         .navigationTitle(vm.listInfo?.name ?? "Lista")
         .navigationBarTitleDisplayMode(.inline)
@@ -162,7 +162,6 @@ struct ListDetailView: View {
                     }
                     .listStyle(.insetGrouped)
                     .scrollContentBackground(.hidden)
-                    .padding(.bottom, 70)
                 }
             }
         }
@@ -203,9 +202,7 @@ struct ListDetailView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(Capsule().fill(isSelected ? Theme.Colors.brand : Theme.Colors.surface))
-            .foregroundColor(isSelected ? .white : Theme.Colors.textPrimary)
-            .overlay(Capsule().stroke(isSelected ? Color.clear : Theme.Colors.separator, lineWidth: 0.5))
+            .chipSurface(isSelected: isSelected)
         }
     }
 
@@ -259,14 +256,8 @@ struct ListDetailView: View {
     private var addButton: some View {
         Button { showAddSheet = true } label: {
             Label("Añadir artículo", systemImage: "plus")
-                .font(.headline)
-                .fontDesign(.rounded)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 52)
-                .background(Theme.Colors.brand)
-                .cornerRadius(Theme.Radii.button)
         }
+        .buttonStyle(PrimaryButtonStyle())
         .padding(.horizontal, Theme.Spacing.lg)
         .padding(.bottom, Theme.Spacing.sm)
     }
@@ -279,10 +270,10 @@ struct ListDetailView: View {
                 .fontDesign(.rounded)
                 .padding(.horizontal, Theme.Spacing.md)
                 .padding(.vertical, Theme.Spacing.sm)
-                .background(Capsule().fill(Theme.Colors.surface).shadow(radius: 4))
+                .floatingSurface(in: Capsule())
                 .foregroundColor(Theme.Colors.textPrimary)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
-                .padding(.bottom, 70)
+                .padding(.bottom, Theme.Spacing.md)
         }
     }
 }

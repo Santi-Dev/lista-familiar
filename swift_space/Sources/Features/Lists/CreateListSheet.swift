@@ -13,7 +13,6 @@ struct CreateListSheet: View {
                 Spacer()
             }
             .padding(Theme.Spacing.lg)
-            .background(Theme.Colors.background.ignoresSafeArea())
             .navigationTitle("Nueva lista")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
