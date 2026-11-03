@@ -30,7 +30,7 @@ Lee `README.md` (visión general) y `docs/ARCHITECTURE.md` (MVVM) antes de tocar
 - Máximo 3 intentos ante fallos de CI antes de explicar el problema.
 
 ## App Store
-Ver `docs/APPSTORE.md` (requisitos pendientes: borrar cuenta, política de privacidad, manifiesto de privacidad).
+Ver `docs/APPSTORE.md` (paquete de subida, ficha y estado de los requisitos).
 
 ## TestFlight
 Ver `docs/TESTFLIGHT.md`. El workflow `testflight.yml` es manual y necesita 4 secrets de GitHub.

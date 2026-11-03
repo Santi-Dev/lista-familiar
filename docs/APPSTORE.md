@@ -44,14 +44,14 @@ Nota: a partir de abril de 2027 Apple pedirá también capturas "iPhone Duo" par
 - **Cuenta de demostración** (obligatoria porque la app pide iniciar sesión): usuario y contraseña que no caduquen.
 - **Notas** (máx. 4000 bytes): "El registro es por correo. Un grupo familiar se crea o se une con un código de 6 caracteres."
 
-### Requisitos de la app que hoy nos faltan
-| Requisito | Estado | Qué hacer |
+### Requisitos de la app (estado)
+| Requisito | Estado | Detalle |
 |---|---|---|
-| **Borrar la cuenta desde la app** (guideline 5.1.1(v)) | Falta | "Eliminar mi cuenta" en Ajustes + función SQL `delete_my_account()` en Supabase. Sin esto Apple rechaza la app |
-| **Manifiesto de privacidad** (`PrivacyInfo.xcprivacy`) | Falta | Añadirlo al target con las APIs de "razón requerida" que usen la app y sus dependencias |
-| Política de privacidad y URL de soporte | Faltan | Publicar dos páginas (por ejemplo con GitHub Pages) |
+| **Borrar la cuenta desde la app** (guideline 5.1.1(v)) | Código listo; falta aplicar la migración | Ajustes → "Eliminar mi cuenta" + `supabase/migrations/003_delete_account.sql`. **Hay que aplicar la migración en producción** (`npx.cmd supabase db push --remote`). Las pruebas corren en CI sobre un Supabase local (`backend-tests`) |
+| **Manifiesto de privacidad** | Hecho | `swift_space/Sources/App/PrivacyInfo.xcprivacy` (sin rastreo; correo, nombre, ID de usuario y listas, para el funcionamiento de la app). Si App Store Connect avisa de alguna API de "razón requerida" tras subir a TestFlight, se añade aquí |
+| **Política de privacidad y URL de soporte** | Borradores listos en `site/` | Falta tu correo de contacto y activar GitHub Pages (workflow `pages`) |
 | Cifrado de exportación | Hecho | `ITSAppUsesNonExemptEncryption = false` |
-| Sign in with Apple | No aplica | Solo es obligatorio si se ofrece login con terceros (Google, Facebook…) |
+| Sign in with Apple | No aplica | Solo si se ofrece login con Google, Facebook u otros terceros |
 
 ## 2. Ficha en App Store Connect
 1. **Información de la app**: nombre (máx. 30 caracteres), subtítulo, categoría (Compras o Estilo de vida), idioma principal Español.
@@ -84,3 +84,24 @@ Nota: a partir de abril de 2027 Apple pedirá también capturas "iPhone Duo" par
    Para la versión oscura: `node compose.mjs raw out-oscuro oscuro`.
 3. Los textos de cada diapositiva están en `tools/store/store.json`. Salen en `tools/store/out/<tamaño>/*.jpg`, sin
    transparencia, en `out/iphone-6.9/` (1320×2868) y `out/iphone-6.3/` (1206×2622), listas para subir a App Store Connect.
+
+## 6. Paquete de subida: qué está listo y qué falta
+
+**Listo (en el repo)**
+- Textos de la ficha validados contra los límites de Apple: `tools/store/listing.json` (`node tools/store/check-listing.mjs`).
+- Carrusel de capturas en los dos tamaños obligatorios (`tools/store`).
+- Borrado de cuenta (app + migración), manifiesto de privacidad y páginas de soporte y privacidad (`site/`).
+- Workflows: `testflight` (subir build), `pages` (publicar `site/`), `backend-tests` (pruebas del backend en local).
+
+**Lo que tienes que hacer tú**
+1. **Correo de contacto público**: dime cuál usar y lo pongo en `site/` (sustituye `CORREO_DE_CONTACTO`). Aparecerá en una web pública.
+2. **Activar GitHub Pages**: repo → Settings → Pages → Source: *GitHub Actions*; luego Actions → `pages` → Run workflow.
+   La URL será `https://santi-dev.github.io/lista-familiar/` (soporte) y `.../privacidad.html`.
+3. **Aplicar la migración del borrado de cuenta** en producción (tras ver `backend-tests` en verde).
+4. **Crear la cuenta de demostración** en la app: regístrate con un correo y contraseña que no vayas a cambiar, crea el grupo
+   "Familia Demo" y 2 o 3 listas con artículos. Apunta esos datos para "Información de revisión".
+5. **Apple**: cuenta aprobada → registrar el bundle ID → crear la app → 4 secrets en GitHub → lanzar `testflight`.
+6. En **App Store Connect**: pegar los textos de `listing.json`, subir las imágenes de `out/iphone-6.9` y `out/iphone-6.3`,
+   rellenar privacidad (correo, nombre, ID de usuario y contenido del usuario; vinculados; sin rastreo), clasificación por edades
+   (todas las respuestas "ninguno" → 4+), copyright (`2026 Tu nombre`), contacto con teléfono internacional y la cuenta de demostración.
+7. **Añadir para revisión → Enviar a revisión**.

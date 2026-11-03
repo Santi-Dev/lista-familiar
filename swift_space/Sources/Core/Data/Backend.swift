@@ -22,6 +22,8 @@ protocol Backend: Sendable {
     func create(body: CreateGroupDto) async throws -> FamilyGroupDto
     func join(body: JoinGroupDto) async throws -> FamilyGroupDto
     func leave() async throws -> SuccessDto
+    /// Borra la cuenta del usuario y todos sus datos (función SQL `delete_my_account`).
+    func deleteAccount() async throws
 
     func getLists(archived: String?) async throws -> ListsResponseDto
     func create(body: CreateListDto) async throws -> ShoppingListSummaryDto

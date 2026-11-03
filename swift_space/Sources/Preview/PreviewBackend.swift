@@ -47,6 +47,7 @@ struct PreviewBackend: Backend {
     func create(body: CreateGroupDto) async throws -> FamilyGroupDto { group }
     func join(body: JoinGroupDto) async throws -> FamilyGroupDto { group }
     func leave() async throws -> SuccessDto { SuccessDto(success: true) }
+    func deleteAccount() async throws {}
 
     func getLists(archived: String?) async throws -> ListsResponseDto {
         if archived == "true" { return ListsResponseDto(items: []) }

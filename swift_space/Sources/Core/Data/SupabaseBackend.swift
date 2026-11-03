@@ -188,6 +188,14 @@ final class SupabaseBackend: Backend, @unchecked Sendable {
         }
     }
 
+    func deleteAccount() async throws {
+        try await run {
+            try await client.rpc("delete_my_account").execute()
+            // El usuario ya no existe en el servidor: basta con limpiar la sesión local.
+            try? await client.auth.signOut(scope: .local)
+        }
+    }
+
     // MARK: - Listas
 
     func getLists(archived: String?) async throws -> ListsResponseDto {
