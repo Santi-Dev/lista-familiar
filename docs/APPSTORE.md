@@ -94,7 +94,7 @@ Nota: a partir de abril de 2027 Apple pedirá también capturas "iPhone Duo" par
 - Workflows: `testflight` (subir build), `pages` (publicar `site/`), `backend-tests` (pruebas del backend en local).
 
 **Lo que tienes que hacer tú**
-1. **Correo de contacto público**: dime cuál usar y lo pongo en `site/` (sustituye `CORREO_DE_CONTACTO`). Aparecerá en una web pública.
+1. **Correo de contacto público**: hecho, `santiagomecatronica@gmail.com` (aparece en `site/` al publicar GitHub Pages).
 2. **Activar GitHub Pages**: repo → Settings → Pages → Source: *GitHub Actions*; luego Actions → `pages` → Run workflow.
    La URL será `https://santi-dev.github.io/lista-familiar/` (soporte) y `.../privacidad.html`.
 3. **Aplicar la migración del borrado de cuenta** en producción (tras ver `backend-tests` en verde).
