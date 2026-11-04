@@ -15,6 +15,8 @@ enum RelativeDate {
         return f
     }()
     private static let plain = ISO8601DateFormatter()
+    /// Fecha "actual" usada para el texto relativo; los tests la fijan para que los snapshots no cambien con el tiempo.
+    static var now: () -> Date = { Date() }
     private static let relative: RelativeDateTimeFormatter = {
         let f = RelativeDateTimeFormatter()
         f.locale = Locale(identifier: "es_ES")
@@ -24,6 +26,6 @@ enum RelativeDate {
     /// "hace 2 horas" a partir de una fecha ISO 8601 (con o sin fracción de segundo).
     static func string(from iso: String) -> String {
         guard let date = withFraction.date(from: iso) ?? plain.date(from: iso) else { return "" }
-        return relative.localizedString(for: date, relativeTo: Date())
+        return relative.localizedString(for: date, relativeTo: now())
     }
 }

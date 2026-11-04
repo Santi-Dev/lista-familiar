@@ -25,7 +25,7 @@ Los ViewModels leen `APIClient.shared`, que los tests sustituyen por `PreviewBac
 por ejemplo `PreviewBackend(groupName: "…")`).
 
 ### Cómo se captura
-Cada pantalla se muestra en una `UIWindow` real, se espera 2 s a que terminen las cargas (`.task`) y se captura con
+Cada pantalla se muestra en una `UIWindow` real, se espera a que terminen las cargas (`.task`) hasta que la imagen sea estable y se captura con
 `drawHierarchy`, así que el **Liquid Glass se renderiza de verdad**. Las pantallas de título largo se prueban con un
 ancho de 375 pt (el iPhone más estrecho soportado).
 

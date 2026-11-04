@@ -15,10 +15,13 @@ final class ScreenSnapshotTests: XCTestCase {
     override func setUp() {
         super.setUp()
         APIClient.shared = PreviewBackend()
+        // 2 horas después de las fechas fijas de PreviewBackend: los textos relativos salen siempre como «hace 2 horas».
+        RelativeDate.now = { ISO8601DateFormatter().date(from: "2026-01-15T12:00:00Z")! }
     }
 
     override func tearDown() {
         APIClient.shared = PreviewBackend()
+        RelativeDate.now = { Date() }
         super.tearDown()
     }
 
@@ -57,12 +60,31 @@ final class ScreenSnapshotTests: XCTestCase {
         window.makeKeyAndVisible()
         defer { window.isHidden = true }
 
+        // Espera mínima para que arranquen las cargas (`.task`)…
         try? await Task.sleep(for: wait)
 
+        // …y después captura hasta que la imagen sea estable (2 capturas seguidas idénticas), con un máximo de ~12 s.
+        // Así no dependemos de la velocidad del runner ni de animaciones que aún no han terminado.
+        var last = capture(window, size: size)
+        var stableFrames = 0
+        for _ in 0..<24 {
+            try? await Task.sleep(for: .milliseconds(500))
+            let next = capture(window, size: size)
+            if next.pngData() == last.pngData() {
+                stableFrames += 1
+                if stableFrames >= 2 { return next }
+            } else {
+                stableFrames = 0
+            }
+            last = next
+        }
+        return last
+    }
+
+    private func capture(_ window: UIWindow, size: CGSize) -> UIImage {
         let format = UIGraphicsImageRendererFormat()
         format.scale = 2
-        let renderer = UIGraphicsImageRenderer(size: size, format: format)
-        return renderer.image { _ in
+        return UIGraphicsImageRenderer(size: size, format: format).image { _ in
             window.drawHierarchy(in: CGRect(origin: .zero, size: size), afterScreenUpdates: true)
         }
     }
