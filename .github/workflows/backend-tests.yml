@@ -1,0 +1,33 @@
+name: backend-tests
+
+# Levanta un Supabase LOCAL (contenedores), aplica las migraciones de supabase/migrations y ejecuta
+# supabase/tests/backend.test.sql. No toca el proyecto de producción.
+on:
+  push:
+    paths: ["supabase/**", ".github/workflows/backend-tests.yml"]
+  pull_request:
+    paths: ["supabase/**", ".github/workflows/backend-tests.yml"]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Arrancar Supabase local (aplica las migraciones)
+        run: supabase start -x studio,imgproxy,edge-runtime,vector,logflare,supavisor,mailpit
+
+      - name: Pruebas SQL
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -f supabase/tests/backend.test.sql 2>&1 | tee test.log
+          grep -c "^psql:.*NOTICE:  ok" test.log || true
+
+      - name: Parar Supabase
+        if: always()
+        run: supabase stop --no-backup

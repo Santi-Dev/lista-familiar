@@ -1,0 +1,15 @@
+{
+  "nombre": "Lista Familiar",
+  "nombreAlternativas": ["Lista Familiar: Compras", "Mi Lista Familiar"],
+  "subtitulo": "La compra, en familia",
+  "textoPromocional": "Crea tu grupo familiar, comparte tus listas de la compra y mira al instante lo que tu familia añade o marca como comprado. Sin anuncios.",
+  "descripcion": "Todas tus compras en una sola lista, compartida con tu familia y siempre al día.\n\nCon Lista Familiar, tú y los tuyos veis la misma lista de la compra en tiempo real. Si alguien añade leche o marca el pan como comprado, lo ves al momento en tu móvil. Se acabaron las llamadas desde el supermercado para preguntar qué falta.\n\nLO QUE PUEDES HACER\n• Crear tu grupo familiar e invitar a los tuyos con un código de 6 caracteres.\n• Tener varias listas: mercado semanal, cumpleaños, limpieza del hogar…\n• Añadir productos en segundos, con cantidad y categoría.\n• Marcar lo que ya compraste y ver quién lo compró.\n• Ver el progreso de cada lista de un vistazo.\n• Archivar las listas que ya no usas y recuperarlas cuando quieras.\n• Filtrar por categoría: frutas y verduras, lácteos y huevos, carnes y pescado, panadería, limpieza, bebidas y despensa.\n\nPENSADA PARA TI\n• Diseño sencillo y rápido, con modo claro y modo oscuro.\n• Sin anuncios y sin rastreo.\n• Tus datos son solo de tu familia: nadie fuera de tu grupo puede ver tus listas.\n• Puedes eliminar tu cuenta y tus datos cuando quieras desde Ajustes.\n\nDescarga Lista Familiar y haz la compra con tu familia, sin complicaciones.",
+  "palabrasClave": "organizar,compra,supermercado,familia,compartida,mercado,despensa,compras,grupo,casa,hogar,tareas",
+  "categoriaPrincipal": "Estilo de vida",
+  "categoriaSecundaria": "Productividad",
+  "copyright": "2026 TU NOMBRE",
+  "urlSoporte": "https://santi-dev.github.io/lista-familiar/",
+  "urlPrivacidad": "https://santi-dev.github.io/lista-familiar/privacidad.html",
+  "notasRevision": "Lista Familiar es una app de listas de la compra compartidas por grupo familiar.\n\nPara probarla puedes usar la cuenta de demostración indicada arriba (correo y contraseña), que ya pertenece a un grupo con listas de ejemplo. También puedes registrarte con cualquier correo: el registro entra directamente, sin verificación. Después se crea un grupo familiar o se une uno existente con un código de 6 caracteres.\n\nBorrado de cuenta: Ajustes → Eliminar mi cuenta.\n\nLa app usa Supabase (https) como backend. No hay compras dentro de la app, anuncios ni rastreo.",
+  "novedades": "Primera versión de Lista Familiar."
+}

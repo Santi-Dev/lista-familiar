@@ -3,6 +3,9 @@ import SwiftUI
 /// Modo de capturas para CI: `-PREVIEW_SCREEN <nombre>` sustituye Supabase por datos de
 /// ejemplo (`PreviewBackend`) y muestra directamente una pantalla. No afecta al uso normal.
 enum PreviewMode {
+    /// `true` cuando la app actúa como anfitrión de los tests (no debe tocar la red).
+    static let isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+
     static let screen: String? = {
         let args = ProcessInfo.processInfo.arguments
         guard let i = args.firstIndex(of: "-PREVIEW_SCREEN"), i + 1 < args.count else { return nil }

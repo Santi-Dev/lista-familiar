@@ -6,6 +6,7 @@ struct SettingsView: View {
     @State private var codeCopied = false
     @State private var showLeaveConfirm = false
     @State private var showLogoutConfirm = false
+    @State private var showDeleteConfirm = false
 
     var body: some View {
         NavigationStack {
@@ -95,12 +96,32 @@ struct SettingsView: View {
                     .foregroundColor(Theme.Colors.destructive)
                     .fontDesign(.rounded)
             }
+
+            Section {
+                Button("Eliminar mi cuenta") { showDeleteConfirm = true }
+                    .foregroundColor(Theme.Colors.destructive)
+                    .fontDesign(.rounded)
+                    .disabled(vm.isDeleting)
+            } footer: {
+                Text("Se borrarán tus datos de forma permanente. Si eres el último miembro de tu grupo, también se borrarán sus listas.")
+                    .fontDesign(.rounded)
+            }
         }
         .confirmationDialog("¿Salir del grupo? Dejarás de ver sus listas.", isPresented: $showLeaveConfirm, titleVisibility: .visible) {
             Button("Salir", role: .destructive) { Task { await vm.leaveGroup(); session.setFamilyGroup(id: nil) } }
         }
         .confirmationDialog("¿Cerrar sesión?", isPresented: $showLogoutConfirm, titleVisibility: .visible) {
             Button("Cerrar sesión", role: .destructive) { session.logout() }
+        }
+        .confirmationDialog("¿Eliminar tu cuenta? Esta acción no se puede deshacer.", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+            Button("Eliminar mi cuenta", role: .destructive) {
+                Task { if await vm.deleteAccount() { session.logout() } }
+            }
+        }
+        .alert("No se pudo eliminar la cuenta", isPresented: Binding(get: { vm.deleteError != nil }, set: { if !$0 { vm.deleteError = nil } })) {
+            Button("Entendido", role: .cancel) {}
+        } message: {
+            Text(vm.deleteError ?? "")
         }
     }
 }

@@ -11,7 +11,9 @@ struct FamilyShoppingListsApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if let screen = PreviewMode.screen {
+                if PreviewMode.isRunningTests {
+                    Color.clear
+                } else if let screen = PreviewMode.screen {
                     PreviewMode.root(screen)
                 } else {
                     RootView()

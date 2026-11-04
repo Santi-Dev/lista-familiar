@@ -26,7 +26,7 @@ struct ListDetailView: View {
         }
         .safeAreaInset(edge: .bottom) { addButton }
         .background(Theme.Colors.background.ignoresSafeArea())
-        .navigationTitle(vm.listInfo?.name ?? "Lista")
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -85,6 +85,15 @@ struct ListDetailView: View {
         } else {
             VStack(spacing: 0) {
                 if let info = vm.listInfo {
+                    Text(info.name)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .fontDesign(.rounded)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                        .lineLimit(3)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, Theme.Spacing.lg)
+                        .padding(.top, Theme.Spacing.sm)
                     HStack {
                         Text("\(Int(info.purchasedCount))/\(Int(info.itemCount)) comprados")
                             .font(.subheadline)
@@ -93,7 +102,7 @@ struct ListDetailView: View {
                         Spacer()
                     }
                     .padding(.horizontal, Theme.Spacing.lg)
-                    .padding(.top, Theme.Spacing.sm)
+                    .padding(.top, Theme.Spacing.xs)
 
                     if info.isArchived {
                         HStack {
@@ -121,7 +130,7 @@ struct ListDetailView: View {
                     if vm.selectedCategory != nil {
                         EmptyStateView(icon: "magnifyingglass", title: "No hay artículos en \(vm.selectedCategory!.label)", subtitle: "")
                     } else {
-                        EmptyStateView(icon: "basket", title: "La lista está vacía", subtitle: "Añade lo que necesitáis comprar.", buttonTitle: "Añadir artículo") {
+                        EmptyStateView(icon: "basket", title: "La lista está vacía", subtitle: "Añade lo que necesitas comprar.", buttonTitle: "Añadir artículo") {
                             showAddSheet = true
                         }
                     }

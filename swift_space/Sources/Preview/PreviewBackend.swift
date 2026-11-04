@@ -2,13 +2,25 @@ import Foundation
 
 /// Datos de ejemplo sin red para las capturas de CI.
 struct PreviewBackend: Backend {
-    private static let now = "2026-01-15T10:00:00.000Z"
+    /// Configurables para probar nombres largos en los tests de snapshots.
+    var groupName = "Familia García"
+    var firstListName = "Mercado semanal"
+
+    /// En las capturas (`-PREVIEW_SCREEN`) las fechas son recientes ("hace 2 horas"); en los tests son fijas para que los snapshots no cambien.
+    static var useRecentDates = false
+    private static var now: String { useRecentDates ? iso(hoursAgo: 2) : "2026-01-15T10:00:00.000Z" }
+    private static func iso(hoursAgo: Double) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: Date().addingTimeInterval(-hoursAgo * 3600))
+    }
     private static let lucia = UserPublicDto(id: "u1", name: "Lucía")
     private static var luciaJSON: JSONValue { .object(["id": .string("u1"), "name": .string("Lucía")]) }
 
-    private static func list(_ id: String, _ name: String, _ total: Double, _ done: Double) -> ShoppingListSummaryDto {
-        ShoppingListSummaryDto(id: id, name: name, isArchived: false, createdBy: luciaJSON,
-                               itemCount: total, purchasedCount: done, createdAt: now, updatedAt: now)
+    private static func list(_ id: String, _ name: String, _ total: Double, _ done: Double, hoursAgo: Double = 2) -> ShoppingListSummaryDto {
+        let updated = useRecentDates ? iso(hoursAgo: hoursAgo) : now
+        return ShoppingListSummaryDto(id: id, name: name, isArchived: false, createdBy: luciaJSON,
+                               itemCount: total, purchasedCount: done, createdAt: now, updatedAt: updated)
     }
 
     private static func item(_ id: String, _ name: String, _ qty: String, _ cat: String, _ bought: Bool) -> ListItemDto {
@@ -17,10 +29,12 @@ struct PreviewBackend: Backend {
                     addedBy: luciaJSON, createdAt: now, updatedAt: now)
     }
 
-    private static let group = FamilyGroupDto(
-        id: "g1", name: "Familia García", inviteCode: "ABC123", createdById: "u1",
-        members: [lucia, UserPublicDto(id: "u2", name: "Pablo"), UserPublicDto(id: "u3", name: "Marta")],
-        createdAt: now)
+    private var group: FamilyGroupDto {
+        FamilyGroupDto(
+            id: "g1", name: groupName, inviteCode: "ABC123", createdById: "u1",
+            members: [Self.lucia, UserPublicDto(id: "u2", name: "Pablo"), UserPublicDto(id: "u3", name: "Marta")],
+            createdAt: Self.now)
+    }
 
     func me() async throws -> MeResponseDto {
         MeResponseDto(user: AuthUserDto(id: "u1", email: "lucia@example.com", name: "Lucía", familyGroupId: "g1"))
@@ -29,17 +43,18 @@ struct PreviewBackend: Backend {
     func signup(body: SignupDto) async throws -> AuthResponseDto { try await login(body: LoginDto(email: body.email, password: body.password)) }
     func signOut() async {}
 
-    func myGroup() async throws -> FamilyGroupDto { Self.group }
-    func create(body: CreateGroupDto) async throws -> FamilyGroupDto { Self.group }
-    func join(body: JoinGroupDto) async throws -> FamilyGroupDto { Self.group }
+    func myGroup() async throws -> FamilyGroupDto { group }
+    func create(body: CreateGroupDto) async throws -> FamilyGroupDto { group }
+    func join(body: JoinGroupDto) async throws -> FamilyGroupDto { group }
     func leave() async throws -> SuccessDto { SuccessDto(success: true) }
+    func deleteAccount() async throws {}
 
     func getLists(archived: String?) async throws -> ListsResponseDto {
         if archived == "true" { return ListsResponseDto(items: []) }
         return ListsResponseDto(items: [
-            Self.list("l1", "Mercado semanal", 6, 2),
-            Self.list("l2", "Cumpleaños de Marta", 4, 0),
-            Self.list("l3", "Limpieza del hogar", 3, 3),
+            Self.list("l1", firstListName, 6, 2),
+            Self.list("l2", "Cumpleaños de Marta", 4, 0, hoursAgo: 26),
+            Self.list("l3", "Limpieza del hogar", 3, 3, hoursAgo: 74),
         ])
     }
     func create(body: CreateListDto) async throws -> ShoppingListSummaryDto { Self.list("l9", body.name, 0, 0) }
@@ -47,7 +62,7 @@ struct PreviewBackend: Backend {
     func delete(id: String) async throws -> SuccessResponseDto { SuccessResponseDto(success: true) }
 
     func getListItems(id: String) async throws -> ListItemsResponseDto {
-        ListItemsResponseDto(list: Self.list("l1", "Mercado semanal", 6, 2), items: [
+        ListItemsResponseDto(list: Self.list("l1", firstListName, 6, 2), items: [
             Self.item("i1", "Manzanas", "1 kg", "FRUTAS_VERDURAS", false),
             Self.item("i2", "Leche", "2 L", "LACTEOS_HUEVOS", false),
             Self.item("i3", "Pechuga de pollo", "500 g", "CARNES_PESCADO", false),
