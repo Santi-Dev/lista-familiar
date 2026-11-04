@@ -2,7 +2,7 @@ name: snapshots
 
 # Tests de snapshots de las pantallas (claro/oscuro, nombres largos). Ver docs/TESTS.md.
 # - Si no hay imágenes de referencia, o se lanza con record=true, las graba y las sube a la rama.
-# - En cualquier otro caso compara contra las referencias y falla si hay diferencias.
+# - En cualquier otro caso compara contra las referencias y falla si hay diferencias (modo verificación).
 on:
   push:
     paths: ["swift_space/**", ".github/workflows/snapshots.yml"]
