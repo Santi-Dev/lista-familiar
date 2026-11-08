@@ -32,10 +32,10 @@ extension View {
             .appStyle()
     }
 
-    /// Tipografía redondeada, tinte de marca y formato de fechas en español.
+    /// Tipografía Inter por defecto, tinte de marca y formato de fechas en español.
     @MainActor func appStyle() -> some View {
         self
-            .fontDesign(.rounded)
+            .font(.bodyLarge)
             .tint(.brand)
             .environment(\.locale, .appLocale)
     }

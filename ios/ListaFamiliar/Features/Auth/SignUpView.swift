@@ -20,21 +20,17 @@ struct SignUpView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: Theme.Spacing.md) {
-                Text("Crear cuenta")
-                    .font(.screenTitle)
-                    .foregroundStyle(.textPrimary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, Theme.Spacing.lg)
+                header
 
-                LabeledField("Nombre", isFocused: focus == .name) {
+                LabeledField("Nombre", icon: "person", isFocused: focus == .name) {
                     TextField("Tu nombre", text: $name)
                         .textContentType(.givenName)
                         .focused($focus, equals: .name)
                         .submitLabel(.next)
                         .onSubmit { focus = .email }
                 }
-                LabeledField("Correo electrónico", isFocused: focus == .email) {
-                    TextField("correo@ejemplo.com", text: $email)
+                LabeledField("Correo electrónico", icon: "envelope", isFocused: focus == .email) {
+                    TextField("nombre@ejemplo.com", text: $email)
                         .textContentType(.emailAddress)
                         .keyboardType(.emailAddress)
                         .textInputAutocapitalization(.never)
@@ -43,30 +39,63 @@ struct SignUpView: View {
                         .submitLabel(.next)
                         .onSubmit { focus = .password }
                 }
-                LabeledField("Contraseña", isFocused: focus == .password) {
-                    SecureField("Mínimo \(Credentials.minimumPasswordLength) caracteres", text: $password)
-                        .textContentType(.newPassword)
-                        .focused($focus, equals: .password)
-                        .submitLabel(.join)
-                        .onSubmit(submit)
+                LabeledField("Contraseña", icon: "lock", isFocused: focus == .password) {
+                    PasswordField(
+                        placeholder: "Mínimo \(Credentials.minimumPasswordLength) caracteres", text: $password,
+                        isNew: true, focus: $focus, field: .password, submitLabel: .join, onSubmit: submit)
                 }
 
                 FormErrorText(message: errorMessage)
 
-                Button("Registrarme", action: submit)
-                    .buttonStyle(.primary(isLoading: isSubmitting))
-                    .disabled(!canSubmit)
+                Button(action: submit) {
+                    HStack(spacing: Theme.Spacing.sm) {
+                        Text("Crear mi cuenta")
+                        Image(systemName: "arrow.right")
+                    }
+                }
+                .buttonStyle(.primary(isLoading: isSubmitting))
+                .disabled(!canSubmit)
 
-                Button("¿Ya tienes cuenta? Inicia sesión", action: switchToSignIn)
-                    .font(.subheadline)
-                    .foregroundStyle(.brand)
+                HStack(spacing: Theme.Spacing.xs) {
+                    Text("¿Ya tienes cuenta?")
+                        .foregroundStyle(.textSecondary)
+                    Button("Inicia sesión", action: switchToSignIn)
+                        .foregroundStyle(.brand)
+                        .font(.labelLarge)
+                }
+                .font(.bodyMedium)
+                .padding(.top, Theme.Spacing.xs)
             }
             .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.bottom, Theme.Spacing.lg)
             .animation(.default, value: errorMessage)
         }
         .scrollDismissesKeyboard(.interactively)
         .screenBackground()
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var header: some View {
+        HStack(alignment: .top, spacing: Theme.Spacing.md) {
+            Image(systemName: "house.fill")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 52, height: 52)
+                .background(Color.brand, in: .circle)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Únete a tu hogar")
+                    .font(.headlineLarge)
+                    .foregroundStyle(.textPrimary)
+                Text("Crea tu cuenta para compartir las compras con tu familia en tiempo real.")
+                    .font(.bodyMedium)
+                    .foregroundStyle(.textSecondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, Theme.Spacing.sm)
+        .padding(.bottom, Theme.Spacing.sm)
     }
 
     private func submit() {

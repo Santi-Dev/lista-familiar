@@ -86,17 +86,30 @@ struct ListDetailView: View {
     }
 
     private func header(_ list: ShoppingList) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             Text(list.name)
-                .font(.title2.bold())
+                .font(.headlineLarge)
                 .foregroundStyle(.textPrimary)
                 .lineLimit(3)
                 .accessibilityAddTraits(.isHeader)
-            Text("\(list.purchasedCount)/\(list.itemCount) comprados")
-                .font(.subheadline)
-                .foregroundStyle(.textSecondary)
-                .contentTransition(.numericText())
+            if list.itemCount > 0 {
+                VStack(spacing: Theme.Spacing.sm) {
+                    HStack {
+                        Label("\(list.purchasedCount) de \(list.itemCount) artículos listos", systemImage: "checklist")
+                            .foregroundStyle(.textPrimary)
+                            .contentTransition(.numericText())
+                        Spacer(minLength: Theme.Spacing.sm)
+                        Text(list.progress, format: .percent.precision(.fractionLength(0)))
+                            .foregroundStyle(.brand)
+                    }
+                    .font(.labelLarge)
+                    ProgressBar(value: list.progress)
+                }
+                .padding(Theme.Spacing.md)
+                .cardSurface()
                 .animation(.default, value: list.purchasedCount)
+                .accessibilityElement(children: .combine)
+            }
             if list.isArchived {
                 HStack {
                     Label("Lista archivada", systemImage: "archivebox.fill")
@@ -104,7 +117,7 @@ struct ListDetailView: View {
                     Button("Desarchivar") { setArchived(false) }
                         .fontWeight(.semibold)
                 }
-                .font(.subheadline)
+                .font(.bodyMedium)
                 .foregroundStyle(.highlight)
                 .padding(Theme.Spacing.sm)
                 .padding(.horizontal, Theme.Spacing.xs)
@@ -148,12 +161,18 @@ struct ListDetailView: View {
                             }
                     }
                 } header: {
-                    HStack(spacing: Theme.Spacing.xs) {
-                        Image(systemName: section.category.symbol)
-                            .foregroundStyle(.brand)
+                    HStack(spacing: Theme.Spacing.sm) {
+                        Circle()
+                            .fill(section.category.tint)
+                            .frame(width: 9, height: 9)
                         Text(section.category.title)
+                            .font(.headlineSmall)
+                            .foregroundStyle(.textPrimary)
                         if section.pendingCount > 0 { CountBadge(count: section.pendingCount) }
                     }
+                    .textCase(nil)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityAddTraits(.isHeader)
                 }
             }
         }

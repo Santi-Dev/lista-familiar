@@ -6,49 +6,38 @@ struct FamilyGroupSetupView: View {
 
     @Environment(SessionStore.self) private var session
     @Environment(GroupStore.self) private var groups
-    @State private var mode = Mode.create
     @State private var groupName = ""
     @State private var inviteCode = ""
     @State private var createdGroup: FamilyGroup?
     @State private var isSubmitting = false
     @State private var errorMessage: String?
-    @FocusState private var isFieldFocused: Bool
+    /// Formulario al que pertenece el error que se muestra.
+    @State private var errorMode: Mode?
+    @FocusState private var isNameFocused: Bool
+    @FocusState private var isCodeFocused: Bool
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-                    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                        Text("Hola, \(session.user?.name ?? "")")
-                            .font(.screenTitle)
-                            .foregroundStyle(.textPrimary)
-                        Text("Para empezar, crea tu grupo familiar o únete al de tu familia.")
-                            .foregroundStyle(.textSecondary)
-                    }
+                    header
 
                     if let createdGroup {
                         created(createdGroup)
                     } else {
-                        Picker("Modo", selection: $mode) {
-                            Text("Crear grupo").tag(Mode.create)
-                            Text("Unirme con código").tag(Mode.join)
-                        }
-                        .pickerStyle(.segmented)
-                        .onChange(of: mode) { errorMessage = nil }
-
-                        switch mode {
-                        case .create: createForm
-                        case .join: joinForm
-                        }
+                        createCard
+                        separator
+                        joinCard
                     }
                 }
-                .padding(Theme.Spacing.lg)
-                .animation(.default, value: mode)
+                .padding(.horizontal, Theme.Spacing.lg)
+                .padding(.bottom, Theme.Spacing.lg)
                 .animation(.default, value: createdGroup)
                 .animation(.default, value: errorMessage)
             }
             .scrollDismissesKeyboard(.interactively)
             .screenBackground()
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Cerrar sesión", role: .destructive) { Task { await session.signOut() } }
@@ -58,41 +47,84 @@ struct FamilyGroupSetupView: View {
         }
     }
 
-    private var createForm: some View {
-        VStack(spacing: Theme.Spacing.md) {
-            LabeledField("Nombre del grupo", isFocused: isFieldFocused) {
-                TextField("Familia García", text: $groupName)
-                    .textContentType(.familyName)
-                    .focused($isFieldFocused)
-                    .submitLabel(.done)
-                    .onSubmit(create)
-            }
-            FormErrorText(message: errorMessage)
-            Button("Crear grupo", action: create)
-                .buttonStyle(.primary(isLoading: isSubmitting))
-                .disabled(!NameInput.isValid(groupName) || isSubmitting)
+    private var header: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            Image(systemName: "house.fill")
+                .font(.system(size: 26, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 60, height: 60)
+                .background(Color.brand, in: .circle)
+                .accessibilityHidden(true)
+            Text("Hola, \(session.user?.name ?? "")")
+                .font(.headlineLarge)
+                .foregroundStyle(.textPrimary)
+            Text("Para empezar, crea tu grupo familiar o únete al de tu familia.")
+                .font(.bodyLarge)
+                .foregroundStyle(.textSecondary)
         }
     }
 
-    private var joinForm: some View {
-        VStack(spacing: Theme.Spacing.md) {
-            LabeledField("Código de invitación", isFocused: isFieldFocused) {
-                TextField("ABC123", text: $inviteCode)
-                    .font(.body.monospaced())
-                    .textInputAutocapitalization(.characters)
-                    .autocorrectionDisabled()
-                    .focused($isFieldFocused)
-                    .submitLabel(.join)
-                    .onSubmit(join)
-                    .onChange(of: inviteCode) { _, code in
-                        let normalized = InviteCode.normalize(code)
-                        if normalized != code { inviteCode = normalized }
-                    }
+    private var createCard: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            cardHeader(
+                symbol: "plus.circle.fill", tint: .brand,
+                title: "Crear un nuevo grupo", subtitle: "Tú lo creas y compartes el código.")
+            LabeledField("Nombre del grupo", isFocused: isNameFocused) {
+                TextField("Familia García", text: $groupName)
+                    .textContentType(.familyName)
+                    .focused($isNameFocused)
+                    .submitLabel(.done)
+                    .onSubmit(create)
             }
-            FormErrorText(message: errorMessage)
-            Button("Unirme", action: join)
-                .buttonStyle(.primary(isLoading: isSubmitting))
+            if errorMode == .create { FormErrorText(message: errorMessage) }
+            Button("Crear grupo", action: create)
+                .buttonStyle(.primary(isLoading: isSubmitting && errorMode != .join))
+                .disabled(!NameInput.isValid(groupName) || isSubmitting)
+        }
+        .padding(Theme.Spacing.md)
+        .cardSurface()
+    }
+
+    private var separator: some View {
+        HStack(spacing: Theme.Spacing.md) {
+            Rectangle().fill(Color.hairline).frame(height: 1)
+            Text("O ÚNETE A UNO EXISTENTE")
+                .font(.labelSmall)
+                .tracking(0.6)
+                .foregroundStyle(.textSecondary)
+                .fixedSize()
+            Rectangle().fill(Color.hairline).frame(height: 1)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var joinCard: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            cardHeader(
+                symbol: "key.fill", tint: .highlight,
+                title: "Tengo un código de invitación",
+                subtitle: "Pídele el código de \(InviteCode.length) caracteres a quien creó el grupo.")
+            CodeBoxes(code: $inviteCode, isFocused: $isCodeFocused, onSubmit: join)
+            if errorMode == .join { FormErrorText(message: errorMessage) }
+            Button("Unirme al grupo", action: join)
+                .buttonStyle(.primary(isLoading: isSubmitting && errorMode == .join))
                 .disabled(!InviteCode.isComplete(inviteCode) || isSubmitting)
+        }
+        .padding(Theme.Spacing.md)
+        .cardSurface()
+    }
+
+    private func cardHeader(symbol: String, tint: Color, title: String, subtitle: String) -> some View {
+        HStack(alignment: .top, spacing: Theme.Spacing.md) {
+            IconTile(symbol: symbol, tint: tint, size: 44)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.headlineSmall)
+                    .foregroundStyle(.textPrimary)
+                Text(subtitle)
+                    .font(.bodySmall)
+                    .foregroundStyle(.textSecondary)
+            }
         }
     }
 
@@ -102,9 +134,10 @@ struct FamilyGroupSetupView: View {
                 .font(.system(size: 48))
                 .foregroundStyle(.brand)
             Text("¡Grupo creado!")
-                .font(.title2.bold())
+                .font(.headlineMedium)
                 .foregroundStyle(.textPrimary)
             Text("Comparte este código con tu familia para que se una.")
+                .font(.bodyMedium)
                 .foregroundStyle(.textSecondary)
                 .multilineTextAlignment(.center)
             InviteCodeView(group: group)
@@ -120,19 +153,21 @@ struct FamilyGroupSetupView: View {
 
     private func create() {
         guard NameInput.isValid(groupName), !isSubmitting else { return }
-        submit { createdGroup = try await groups.create(named: groupName) }
+        submit(.create) { createdGroup = try await groups.create(named: groupName) }
     }
 
     private func join() {
         guard InviteCode.isComplete(inviteCode), !isSubmitting else { return }
-        submit { session.joined(try await groups.join(code: inviteCode)) }
+        submit(.join) { session.joined(try await groups.join(code: inviteCode)) }
     }
 
-    private func submit(_ work: @escaping () async throws -> Void) {
-        isFieldFocused = false
+    private func submit(_ mode: Mode, _ work: @escaping () async throws -> Void) {
+        isNameFocused = false
+        isCodeFocused = false
         Task {
             isSubmitting = true
             errorMessage = nil
+            errorMode = mode
             defer { isSubmitting = false }
             do {
                 try await work()

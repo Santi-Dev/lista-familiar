@@ -6,6 +6,7 @@ struct ListaFamiliarApp: App {
     @State private var model: AppModel
 
     init() {
+        FontRegistry.registerAll()
         let mode = LaunchMode.current
         let backend = mode.makeBackend()
         if case .screenshot(let screen) = mode {

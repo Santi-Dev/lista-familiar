@@ -19,7 +19,7 @@ struct PrimaryButtonStyle: ButtonStyle {
                 if isLoading { ProgressView().tint(.white) }
                 configuration.label
             }
-            .font(.headline)
+            .font(.headlineSmall)
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity, minHeight: Theme.controlHeight)
             .brandSurface(in: .capsule)
@@ -42,7 +42,7 @@ struct SecondaryButtonStyle: ButtonStyle {
 
         var body: some View {
             configuration.label
-                .font(.headline)
+                .font(.headlineSmall)
                 .foregroundStyle(.brand)
                 .frame(maxWidth: .infinity, minHeight: Theme.controlHeight)
                 .neutralSurface(in: .capsule)

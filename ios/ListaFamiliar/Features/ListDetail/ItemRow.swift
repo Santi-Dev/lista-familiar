@@ -19,22 +19,17 @@ struct ItemRow: View {
             .sensoryFeedback(.impact(weight: .light), trigger: item.isPurchased)
 
             Button(action: onEdit) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(item.name)
-                            .strikethrough(item.isPurchased)
-                            .foregroundStyle(item.isPurchased ? Color.textSecondary : Color.textPrimary)
-                        if let attribution = item.attribution {
-                            Text(attribution)
-                                .font(.caption)
-                                .foregroundStyle(.textSecondary)
-                        }
-                    }
-                    Spacer(minLength: Theme.Spacing.sm)
-                    if let quantity = item.quantity {
-                        Text(quantity)
-                            .font(.subheadline)
-                            .foregroundStyle(.textSecondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.name)
+                        .font(.bodyLarge)
+                        .strikethrough(item.isPurchased)
+                        .foregroundStyle(item.isPurchased ? Color.textSecondary : Color.textPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.bodySmall)
+                            .foregroundStyle(item.isPurchased ? Color.brand : Color.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
                 .contentShape(.rect)
@@ -43,5 +38,11 @@ struct ItemRow: View {
             .accessibilityHint("Editar artículo")
         }
         .frame(minHeight: Theme.controlHeight)
+    }
+
+    /// «1 kg · Añadido por Lucía». Si ya está comprado: «1 kg · Comprado por Lucía».
+    private var subtitle: String? {
+        let parts = [item.quantity, item.attribution].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 }
