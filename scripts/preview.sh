@@ -2,7 +2,7 @@
 # Uso: bash scripts/preview.sh [pantalla ...]
 # Empuja la rama actual y espera al workflow ios-preview; baja las capturas a previews/run-<id>/.
 # - Si el workflow ya está en la rama por defecto: lo lanza con workflow_dispatch (admite pantallas).
-# - Si no: el push lo dispara solo (todas las pantallas). Requiere cambios bajo swift_space/.
+# - Si no: el push lo dispara solo (todas las pantallas). Requiere cambios bajo ios/.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

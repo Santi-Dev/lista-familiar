@@ -5,9 +5,9 @@ name: snapshots
 # - En cualquier otro caso compara contra las referencias y falla si hay diferencias (modo verificación).
 on:
   push:
-    paths: ["swift_space/**", ".github/workflows/snapshots.yml"]
+    paths: ["ios/**", ".github/workflows/snapshots.yml"]
   pull_request:
-    paths: ["swift_space/**", ".github/workflows/snapshots.yml"]
+    paths: ["ios/**", ".github/workflows/snapshots.yml"]
   workflow_dispatch:
     inputs:
       record:
@@ -29,24 +29,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Instalar XcodeGen
-        run: brew install xcodegen
-
-      - name: Generar proyecto
-        working-directory: swift_space
-        run: xcodegen generate
-
       - name: Decidir modo
         id: mode
         run: |
-          if [ "${{ inputs.record }}" = "true" ] || [ ! -d swift_space/Tests/__Snapshots__ ]; then
+          if [ "${{ inputs.record }}" = "true" ] || [ ! -d ios/Snapshots ]; then
             echo "record=true" >> "$GITHUB_OUTPUT"
           else
             echo "record=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Ejecutar tests
-        working-directory: swift_space
+        working-directory: ios
         run: |
           UDID=$(xcrun simctl list devices available | grep -F "iPhone 17 (" | tail -1 | grep -oE "[0-9A-F-]{36}")
           echo "Simulador: $UDID"
@@ -58,7 +51,7 @@ jobs:
             export TEST_RUNNER_SNAPSHOT_TESTING_RECORD=all
           fi
           xcodebuild test \
-            -project FamilyShoppingLists.xcodeproj -scheme FamilyShoppingLists \
+            -project ListaFamiliar.xcodeproj -scheme ListaFamiliar \
             -destination "platform=iOS Simulator,id=$UDID" \
             -derivedDataPath build CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$RUNNER_TEMP/test.log"
           code=${PIPESTATUS[0]}
@@ -71,7 +64,7 @@ jobs:
       - name: Comprobar que se grabaron imágenes
         if: steps.mode.outputs.record == 'true'
         run: |
-          n=$(find swift_space/Tests/__Snapshots__ -name '*.png' 2>/dev/null | wc -l)
+          n=$(find ios/Snapshots -name '*.png' 2>/dev/null | wc -l)
           echo "Imágenes grabadas: $n"
           if [ "$n" -eq 0 ]; then grep -E "error:" "$RUNNER_TEMP/test.log" | sort -u | head -20; exit 1; fi
 
@@ -80,7 +73,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add swift_space/Tests/__Snapshots__
+          git add ios/Snapshots
           if git diff --cached --quiet; then echo "Sin cambios"; else
             git commit -m "Actualizar snapshots de referencia [skip ci]"
             git pull --rebase origin "${{ github.head_ref || github.ref_name }}"
@@ -92,7 +85,7 @@ jobs:
         with:
           name: snapshots
           path: |
-            swift_space/Tests/__Snapshots__
+            ios/Snapshots
             ${{ runner.temp }}/snapshot-artifacts
             ${{ runner.temp }}/test.log
           if-no-files-found: ignore

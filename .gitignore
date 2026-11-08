@@ -1,7 +1,7 @@
-# Xcode / XcodeGen (se generan con `xcodegen generate`)
-*.xcodeproj/
-swift_space/Info.plist
-swift_space/build/
+# Xcode (el proyecto ios/ListaFamiliar.xcodeproj sí se versiona)
+xcuserdata/
+*.xcuserstate
+ios/build/
 DerivedData/
 
 # Capturas descargadas de CI

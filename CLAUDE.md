@@ -1,17 +1,19 @@
 # Lista Familiar — reglas de sesión
 
-Lee `README.md` (visión general) y `docs/ARCHITECTURE.md` (MVVM) antes de tocar código.
+Lee `README.md` (visión general) y `docs/ARCHITECTURE.md` (SwiftUI nativa con stores) antes de tocar código.
 
 ## Proyecto
-- App iOS 18+, SwiftUI, **MVVM** con `@Observable`. Backend: **Supabase** (Auth, Postgres+RLS, Realtime). Sin servidor propio.
+- App iOS 18+, solo **SwiftUI**, Swift 6. Proyecto Xcode nativo en `ios/ListaFamiliar.xcodeproj` (sin XcodeGen). Backend: **Supabase** (Auth, Postgres+RLS, Realtime). Sin servidor propio.
 - **Todos los textos de la interfaz en español, en tono de «tú»** (cercano y personal: «tus compras», «añade», «invita a tu familia»; nunca «vosotros»: «haced», «vuestra», «necesitáis»). Código y nombres en inglés.
-- Tema verde de supermercado: marca #2E7D4F, acento #E07A2E, tipografía SF Pro Rounded. Usar siempre `Theme` (se adapta a modo oscuro).
+- Tema verde de supermercado: marca #2E7D4F, acento #E07A2E, tipografía SF Pro Rounded. Colores del catálogo de assets (`Color.brand`, `.highlight`, `.surface`…, con modo oscuro) y medidas de `Theme`.
 - Categorías: FRUTAS_VERDURAS, LACTEOS_HUEVOS, CARNES_PESCADO, PANADERIA, LIMPIEZA, BEBIDAS, DESPENSA, OTROS.
 
 ## Reglas de arquitectura
-- Una pantalla = `Features/<Nombre>/<Nombre>View.swift` + `<Nombre>ViewModel.swift`.
-- Las Views no llaman al backend; los ViewModels (`@Observable @MainActor`) sí, a través del protocolo `Backend`.
-- Datos nuevos: método en `Backend` + `SupabaseBackend` + `PreviewBackend`. Cambios de esquema: migración nueva en `supabase/migrations/`, nunca editar las anteriores.
+- Sin ViewModels por pantalla: el estado compartido vive en los stores `@Observable @MainActor` (`SessionStore`, `GroupStore`,
+  `ListsStore`), que llegan por `@Environment`. El estado local del formulario vive en la vista con `@State`.
+- Las vistas nunca llaman al backend; los stores sí, a través del protocolo `Backend` (solo lanza `AppError`).
+- Sin UIKit en la app (solo en los tests de snapshots).
+- Datos nuevos: método en `Backend` + `SupabaseBackend` + `InMemoryBackend` + caso de uso en el store, con su test en `StoreTests`. Cambios de esquema: migración nueva en `supabase/migrations/`, nunca editar las anteriores.
 - Nunca poner la clave `service_role` ni secretos (`.p8`) en el repo. La clave `anon` es pública y está en `AppConfig.swift`.
 
 ## Verificación de UI (sin Mac)
@@ -19,8 +21,9 @@ Lee `README.md` (visión general) y `docs/ARCHITECTURE.md` (MVVM) antes de tocar
 - `bash scripts/preview.sh [pantallas]` empuja la rama, lanza `ios-preview` (runner macOS, build para simulador iOS) y baja los PNG a
   `previews/run-<id>/ios-preview/` (`<pantalla>-light.png`, `<pantalla>-dark.png`; `errors.txt` si falla).
 - Pantallas: welcome login register family-setup lists detail settings create-list item-form.
-- Las capturas usan `PreviewBackend` (`-PREVIEW_SCREEN`), sin red. No prueban la conexión real a Supabase.
-- Al añadir una pantalla, registrarla en `Preview/PreviewMode.swift` y en el workflow.
+- Las capturas usan `InMemoryBackend` con `SampleData` (`-PREVIEW_SCREEN`), sin red. No prueban la conexión real a Supabase.
+- Al añadir una pantalla, registrarla en `Preview/PreviewScreen.swift`, en `ScreenSnapshotTests` y en el workflow.
+- Si hay Mac: compilar y probar en local (`xcodebuild test … -scheme ListaFamiliar`). En un Mac Intel el simulador no dibuja Liquid Glass.
 
 ## Flujo para cambios de UI
 1. Editar el Swift y reflejar el cambio en `mock/index.html`.

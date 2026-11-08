@@ -30,4 +30,4 @@ firma automática (API key de App Store Connect) y sube la build a TestFlight.
 - Para testers externos hace falta rellenar "Test Information" y pasar la revisión beta de Apple.
 - Confirmación de correo: en Supabase está desactivada (Authentication → Providers → Email); si la activas,
   el registro pedirá confirmar el correo antes de entrar.
-- La versión (`MARKETING_VERSION`) está en `swift_space/project.yml`.
+- La versión (`MARKETING_VERSION`) está en los ajustes del target `ListaFamiliar` (`ios/ListaFamiliar.xcodeproj`, General → Identity → Version).

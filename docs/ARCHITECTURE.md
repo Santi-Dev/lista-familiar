@@ -1,77 +1,90 @@
-# Arquitectura MVVM
+# Arquitectura (SwiftUI nativa)
 
 ## Principios
-1. La **View** solo dibuja y reenvía acciones. No llama al backend.
-2. El **ViewModel** concentra el estado y la lógica de una pantalla. Es testeable sin SwiftUI.
-3. El acceso a datos pasa siempre por el protocolo **`Backend`**. Así se puede sustituir (`PreviewBackend`, mocks de test).
-4. La sesión (`SessionModel`) es el único estado global y llega por `@Environment`.
+1. **Solo SwiftUI** en la app. UIKit solo aparece en los tests de snapshots (para capturar una ventana real).
+2. **Los stores son la fuente de verdad.** `SessionStore`, `GroupStore` y `ListsStore` son `@Observable @MainActor`,
+   se crean una vez en `AppModel` y llegan a las vistas por el entorno (`@Environment(ListsStore.self)`).
+   «Mis listas» y el detalle comparten los mismos datos: marcar un artículo actualiza al momento el contador de la tarjeta.
+3. **Las vistas no tienen ViewModel.** El estado local (texto de un campo, hoja abierta, diálogo, ruta) vive en la vista
+   con `@State`. Las reglas que merece la pena probar están en tipos puros (`ItemDraft`, `InviteCode`, `Credentials`, `NameInput`).
+4. **El acceso a datos pasa por el protocolo `Backend`**, que solo lanza `AppError`. Las vistas muestran `error.userMessage`.
+5. **Swift 6 con concurrencia estricta.** Modelos `Sendable`, stores en el hilo principal y backends `Sendable`.
 
 ## Anatomía de una pantalla
 
 ```swift
-// Features/Foo/FooViewModel.swift
-@Observable @MainActor
-final class FooViewModel {
-    private(set) var items: [ItemDto] = []   // estado de solo lectura para la vista
-    private(set) var isLoading = true
-    var query = ""                           // estado editable (la vista lo enlaza con $vm.query)
-
-    private let backend: any Backend
-    init(backend: any Backend = APIClient.shared) { self.backend = backend }
-
-    func load() async { /* llama a backend, actualiza estado */ }
-}
-
 // Features/Foo/FooView.swift
 struct FooView: View {
-    @State private var vm = FooViewModel()
+    @Environment(ListsStore.self) private var lists   // estado compartido
+    @State private var name = ""                       // estado local del formulario
+    @State private var errorMessage: String?
+
     var body: some View {
-        List(vm.items) { Text($0.name) }
-            .task { await vm.load() }
+        Form {
+            TextField("Nombre", text: $name)
+            FormErrorText(message: errorMessage)
+            Button("Guardar") { save() }.disabled(!NameInput.isValid(name))
+        }
+        .task { await lists.load(archived: false) }
+    }
+
+    private func save() {
+        Task {
+            do { try await lists.rename(id, to: name) }
+            catch { errorMessage = error.userMessage }
+        }
     }
 }
+
+#Preview { FooView().previewEnvironment() }
 ```
 
-- Estado que modifica la vista → `var`. Estado que solo cambia el ViewModel → `private(set) var`.
-- Estado puramente visual (hoja abierta, diálogo, ruta de navegación) puede vivir en la View con `@State`.
-- Si el ViewModel necesita datos de la sesión, la View se los pasa como parámetro del método
-  (por ejemplo `vm.submit(session: session)`), para no acoplar el ViewModel al entorno de SwiftUI.
-- Las acciones asíncronas se lanzan desde la vista con `Task { await vm.accion() }` o `.task`.
-- Los errores se traducen a texto para el usuario en el ViewModel (`userMessage(for:)`).
+- Las cargas se lanzan con `.task` / `.task(id:)`, que se cancelan solas al salir de la pantalla.
+- Alertas y diálogos ligados a un opcional: `isPresented: $item.isPresent()` + `presenting: item`.
+- Avisos breves: `@State var toast: String?` + `.toast($toast)`.
+- Navegación por valor: `NavigationStack(path:)` con rutas `Hashable` (`AuthRoute`, `UUID` de lista).
+
+## Stores
+
+| Store | Estado | Notas |
+|---|---|---|
+| `SessionStore` | `phase`: `launching`, `unavailable`, `signedOut`, `signedIn(User)` | Sin conexión al abrir, muestra «Reintentar» en vez de cerrar la sesión |
+| `GroupStore` | Grupo familiar y su `LoadState` | Crear, unirse con código y salir |
+| `ListsStore` | Listas (activas y archivadas) y artículos por lista | Cambios optimistas: se aplican en local y se deshacen si el servidor falla |
+
+`RootView` vacía `GroupStore` y `ListsStore` cuando cambia el usuario o su grupo.
 
 ## Capa de datos
 
 ```
-Backend (protocolo)
-├── SupabaseBackend   Auth + PostgREST (RLS) + RPC + Realtime
-└── PreviewBackend    Datos de ejemplo para capturas de CI
+Backend (protocolo, lanza AppError)
+├── SupabaseBackend   Auth + PostgREST (RLS) + RPC + Realtime. Traduce filas (Data/SupabaseRows.swift) a modelos
+└── InMemoryBackend   actor con datos de ejemplo (Data/SampleData.swift): previews, capturas, modo -DEMO y tests
 ```
 
-`APIClient.shared` devuelve el backend activo: `PreviewBackend` si la app se lanzó con `-PREVIEW_SCREEN`,
-`SupabaseBackend` en cualquier otro caso.
-
-Los DTOs (`Core/Models/Models.swift`) mantienen el formato que usa la interfaz. `SupabaseBackend` traduce
-las filas de Postgres (snake_case, relaciones embebidas) a esos DTOs.
+`LaunchMode` decide el backend al arrancar: Supabase en uso normal, `InMemoryBackend` con `-DEMO`, con
+`-PREVIEW_SCREEN <nombre>` o cuando la app es el anfitrión de los tests.
 
 ### Tiempo real
-`Backend.changes(tables:)` devuelve un `AsyncStream<Void>` que emite cuando cambia alguna tabla.
-Los ViewModels de listas y detalle lo observan y recargan. Además hacen un refresco cada 30 s por si se cae la conexión.
+`Backend.changes()` devuelve un `AsyncStream<Void>` que emite cuando cambian `shopping_lists` o `list_items`.
+`MainTabView` lo observa una sola vez y llama a `ListsStore.refresh()`, que recarga lo que ya estaba cargado.
+Además refresca cada 30 s en primer plano y al volver a la app, por si se cae la conexión.
+
+## Sistema de diseño
+- Colores en `Resources/Assets.xcassets` con variante oscura; Xcode genera `Color.brand`, `.highlight`, `.appBackground`,
+  `.surface`, `.textPrimary`, `.textSecondary` y `.hairline`.
+- `appStyle()` aplica en la raíz SF Pro Rounded, el tinte de marca y el formato de fechas en español.
+- Liquid Glass en iOS 26+ (`brandSurface`, `neutralSurface`, `chipSurface`, `floatingSurface`) con alternativa sólida
+  para iOS 18-25. Bajo el cristal tintado hay un relleno sólido para que el texto mantenga el contraste siempre.
 
 ## Seguridad
-- La app solo conoce la clave pública `anon`. El control de acceso real está en las políticas RLS
-  de `supabase/migrations/001_init.sql`.
-- Las operaciones que cambian la pertenencia a un grupo (crear, unirse, salir) son funciones `security definer`
-  que validan el estado antes de escribir; no hay `insert`/`update` directo sobre `family_groups` ni sobre
-  `profiles.family_group_id`.
+- La app solo conoce la clave pública `anon`. El control de acceso real está en las políticas RLS de `supabase/migrations/`.
+- Las operaciones que cambian la pertenencia a un grupo (crear, unirse, salir) son funciones `security definer`.
+- `added_by_id`, `purchased_by_id`, `purchased_at` y `updated_at` los rellenan triggers de la base de datos.
 
 ## Cómo añadir una pantalla
-1. Crea `Features/<Nombre>/` con `<Nombre>View.swift` y `<Nombre>ViewModel.swift`.
-2. Si necesita datos nuevos: añade el método a `Backend`, impleméntalo en `SupabaseBackend` y en `PreviewBackend`.
-   Si hace falta una tabla, columna o regla, crea una migración nueva en `supabase/migrations/`.
-3. Regístrala en `Preview/PreviewMode.swift` y en la lista de pantallas de `.github/workflows/ios-preview.yml`.
-4. Refleja el diseño en `mock/index.html` y verifica con `bash scripts/preview.sh <pantalla>`.
-
-## Pruebas (pendiente)
-Los ViewModels reciben el `Backend` por inicializador, por lo que se pueden probar con un backend falso sin red.
-Aún no hay target de tests; el siguiente paso natural es añadir un `FamilyShoppingListsTests` con un
-`FakeBackend` y pruebas de `ListDetailViewModel` (agrupación por categoría) y `FamilyGroupSetupViewModel`.
+1. Crea la vista en `Features/<Área>/` (Xcode la añade al target solo, por las carpetas sincronizadas) con su `#Preview`.
+2. Si necesita datos nuevos: añade el método a `Backend`, impleméntalo en `SupabaseBackend` y en `InMemoryBackend`,
+   y expón el caso de uso en el store. Si hace falta una tabla, columna o regla, crea una migración nueva.
+3. Añade tests del store en `ListaFamiliarTests/StoreTests.swift`.
+4. Regístrala en `Preview/PreviewScreen.swift`, en `ScreenSnapshotTests` y en `.github/workflows/ios-preview.yml`.

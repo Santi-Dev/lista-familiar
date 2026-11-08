@@ -48,7 +48,7 @@ Nota: a partir de abril de 2027 Apple pedirá también capturas "iPhone Duo" par
 | Requisito | Estado | Detalle |
 |---|---|---|
 | **Borrar la cuenta desde la app** (guideline 5.1.1(v)) | Hecho (migración 003 aplicada en producción) | Ajustes → "Eliminar mi cuenta" + `supabase/migrations/003_delete_account.sql`. Aplicada con `npx.cmd supabase db push --remote`. Las pruebas corren en CI sobre un Supabase local (`backend-tests`) |
-| **Manifiesto de privacidad** | Hecho | `swift_space/Sources/App/PrivacyInfo.xcprivacy` (sin rastreo; correo, nombre, ID de usuario y listas, para el funcionamiento de la app). Si App Store Connect avisa de alguna API de "razón requerida" tras subir a TestFlight, se añade aquí |
+| **Manifiesto de privacidad** | Hecho | `ios/ListaFamiliar/Resources/PrivacyInfo.xcprivacy` (sin rastreo; correo, nombre, ID de usuario y listas, para el funcionamiento de la app). Si App Store Connect avisa de alguna API de "razón requerida" tras subir a TestFlight, se añade aquí |
 | **Política de privacidad y URL de soporte** | Borradores listos en `site/` | Falta tu correo de contacto y activar GitHub Pages (workflow `pages`) |
 | Cifrado de exportación | Hecho | `ITSAppUsesNonExemptEncryption = false` |
 | Sign in with Apple | No aplica | Solo si se ofrece login con Google, Facebook u otros terceros |
@@ -67,7 +67,7 @@ Nota: a partir de abril de 2027 Apple pedirá también capturas "iPhone Duo" par
 1. Pulsa **Añadir para revisión** → **Enviar a revisión**. Suele tardar entre 24 y 48 h.
 2. Si la rechazan, App Store Connect explica el motivo; se corrige, se sube otra build y se reenvía.
 3. Elige **liberación manual o automática** al aprobarse.
-4. Para versiones siguientes: sube `MARKETING_VERSION` en `swift_space/project.yml`, lanza `testflight` y crea la nueva versión en App Store Connect.
+4. Para versiones siguientes: sube la versión del target `ListaFamiliar` en Xcode (General → Identity → Version), lanza `testflight` y crea la nueva versión en App Store Connect.
 
 ## 4. Antes de abrirla al público (Supabase)
 - El plan gratuito **pausa los proyectos tras ~1 semana sin actividad**: para producción conviene el plan Pro.
