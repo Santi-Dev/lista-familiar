@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  SCHEME: FamilyShoppingLists
+  SCHEME: ListaFamiliar
 
 jobs:
   upload:
@@ -14,13 +14,6 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-
-      - name: Instalar XcodeGen
-        run: brew install xcodegen
-
-      - name: Generar proyecto
-        working-directory: swift_space
-        run: xcodegen generate
 
       - name: Guardar API key de App Store Connect
         env:
@@ -30,14 +23,14 @@ jobs:
           printf '%s' "$ASC_KEY_P8" > "$RUNNER_TEMP/asc/AuthKey.p8"
 
       - name: Archivar
-        working-directory: swift_space
+        working-directory: ios
         env:
           TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
           xcodebuild archive \
-            -project FamilyShoppingLists.xcodeproj -scheme "$SCHEME" \
+            -project ListaFamiliar.xcodeproj -scheme "$SCHEME" \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
             -allowProvisioningUpdates \

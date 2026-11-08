@@ -2,7 +2,7 @@ name: ios-preview
 
 on:
   push:
-    paths: ["swift_space/**", ".github/workflows/ios-preview.yml"]
+    paths: ["ios/**", ".github/workflows/ios-preview.yml"]
   workflow_dispatch:
     inputs:
       screens:
@@ -14,7 +14,7 @@ on:
 
 env:
   BUNDLE_ID: com.santidev.listafamiliar
-  SCHEME: FamilyShoppingLists
+  SCHEME: ListaFamiliar
 
 jobs:
   preview:
@@ -23,26 +23,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Instalar XcodeGen
-        run: brew install xcodegen
-
-      - name: Generar proyecto
-        working-directory: swift_space
-        run: xcodegen generate
-
       - name: Compilar
-        working-directory: swift_space
+        working-directory: ios
         run: |
           mkdir -p ../out
           set -o pipefail
-          xcodebuild -project FamilyShoppingLists.xcodeproj -scheme "$SCHEME" \
+          xcodebuild -project ListaFamiliar.xcodeproj -scheme "$SCHEME" \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build CODE_SIGNING_ALLOWED=NO build 2>&1 | tee ../out/build.log \
             || { grep -E "error:" ../out/build.log | sort -u > ../out/errors.txt; exit 1; }
 
       - name: Capturas
         run: |
-          APP=$(find swift_space/build/Build/Products -name "*.app" -maxdepth 3 | head -1)
+          APP=$(find ios/build/Build/Products -name "*.app" -maxdepth 3 | head -1)
           UDID=$(xcrun simctl list devices available | grep -F "${{ inputs.device || 'iPhone 17' }} (" | tail -1 | grep -oE "[0-9A-F-]{36}")
           echo "Simulador: $UDID  App: $APP"
           xcrun simctl boot "$UDID"

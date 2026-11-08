@@ -12,7 +12,7 @@ Camino: **cuenta de desarrollador → app en App Store Connect → build por Tes
 ### Imágenes
 | Asset | Obligatorio | Especificación |
 |---|---|---|
-| **Icono de la app** | Sí | PNG de 1024×1024, **sin canal alfa** (si no, error ITMS-90717). Ya lo tenemos: RGB sin transparencia. Opcional: variantes oscura y tintada (iOS 18) o un `.icon` de Icon Composer (iOS 26, solo Mac) |
+| **Icono de la app** | Sí | PNG de 1024×1024, **sin canal alfa** (si no, error ITMS-90717), cuadrado y a sangre: **sin esquinas redondeadas, sombra ni margen** (iOS aplica su máscara). Ya lo tenemos en `ios/ListaFamiliar/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png`; se generó con `tools/icon/make-icon.swift` a partir de `tools/icon/AppIcon-original.png`. Opcional: variantes oscura y tintada (iOS 18) o un `.icon` de Icon Composer (iOS 26, solo Mac) |
 | **Capturas iPhone "Dynamic Island medio"** | **Sí** | 1206×2622 (o 1179×2556) |
 | **Capturas iPhone "Dynamic Island grande"** (6,9") | **Sí** (o, en su lugar, Face ID grande 1284×2778) | 1320×2868 (o 1290×2796 / 1260×2736) |
 | Resto de tamaños de iPhone | No | Apple los escala a partir de los anteriores |
@@ -48,7 +48,7 @@ Nota: a partir de abril de 2027 Apple pedirá también capturas "iPhone Duo" par
 | Requisito | Estado | Detalle |
 |---|---|---|
 | **Borrar la cuenta desde la app** (guideline 5.1.1(v)) | Hecho (migración 003 aplicada en producción) | Ajustes → "Eliminar mi cuenta" + `supabase/migrations/003_delete_account.sql`. Aplicada con `npx.cmd supabase db push --remote`. Las pruebas corren en CI sobre un Supabase local (`backend-tests`) |
-| **Manifiesto de privacidad** | Hecho | `swift_space/Sources/App/PrivacyInfo.xcprivacy` (sin rastreo; correo, nombre, ID de usuario y listas, para el funcionamiento de la app). Si App Store Connect avisa de alguna API de "razón requerida" tras subir a TestFlight, se añade aquí |
+| **Manifiesto de privacidad** | Hecho | `ios/ListaFamiliar/Resources/PrivacyInfo.xcprivacy` (sin rastreo; correo, nombre, ID de usuario y listas, para el funcionamiento de la app). Si App Store Connect avisa de alguna API de "razón requerida" tras subir a TestFlight, se añade aquí |
 | **Política de privacidad y URL de soporte** | Borradores listos en `site/` | Falta tu correo de contacto y activar GitHub Pages (workflow `pages`) |
 | Cifrado de exportación | Hecho | `ITSAppUsesNonExemptEncryption = false` |
 | Sign in with Apple | No aplica | Solo si se ofrece login con Google, Facebook u otros terceros |
@@ -67,7 +67,7 @@ Nota: a partir de abril de 2027 Apple pedirá también capturas "iPhone Duo" par
 1. Pulsa **Añadir para revisión** → **Enviar a revisión**. Suele tardar entre 24 y 48 h.
 2. Si la rechazan, App Store Connect explica el motivo; se corrige, se sube otra build y se reenvía.
 3. Elige **liberación manual o automática** al aprobarse.
-4. Para versiones siguientes: sube `MARKETING_VERSION` en `swift_space/project.yml`, lanza `testflight` y crea la nueva versión en App Store Connect.
+4. Para versiones siguientes: sube la versión del target `ListaFamiliar` en Xcode (General → Identity → Version), lanza `testflight` y crea la nueva versión en App Store Connect.
 
 ## 4. Antes de abrirla al público (Supabase)
 - El plan gratuito **pausa los proyectos tras ~1 semana sin actividad**: para producción conviene el plan Pro.
