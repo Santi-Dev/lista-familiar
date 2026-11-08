@@ -12,7 +12,7 @@ Camino: **cuenta de desarrollador → app en App Store Connect → build por Tes
 ### Imágenes
 | Asset | Obligatorio | Especificación |
 |---|---|---|
-| **Icono de la app** | Sí | PNG de 1024×1024, **sin canal alfa** (si no, error ITMS-90717). Ya lo tenemos: RGB sin transparencia. Opcional: variantes oscura y tintada (iOS 18) o un `.icon` de Icon Composer (iOS 26, solo Mac) |
+| **Icono de la app** | Sí | PNG de 1024×1024, **sin canal alfa** (si no, error ITMS-90717), cuadrado y a sangre: **sin esquinas redondeadas, sombra ni margen** (iOS aplica su máscara). Ya lo tenemos en `ios/ListaFamiliar/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png`; se generó con `tools/icon/make-icon.swift` a partir de `tools/icon/AppIcon-original.png`. Opcional: variantes oscura y tintada (iOS 18) o un `.icon` de Icon Composer (iOS 26, solo Mac) |
 | **Capturas iPhone "Dynamic Island medio"** | **Sí** | 1206×2622 (o 1179×2556) |
 | **Capturas iPhone "Dynamic Island grande"** (6,9") | **Sí** (o, en su lugar, Face ID grande 1284×2778) | 1320×2868 (o 1290×2796 / 1260×2736) |
 | Resto de tamaños de iPhone | No | Apple los escala a partir de los anteriores |
