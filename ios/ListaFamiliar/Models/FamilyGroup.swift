@@ -7,8 +7,14 @@ struct FamilyGroup: Identifiable, Hashable, Sendable {
     var createdByID: UUID?
     var members: [Member]
     var createdAt: Date
+    /// Rol de cada miembro. Quien no aparece es editor (y el creador, propietario).
+    var roles: [UUID: MemberRole] = [:]
 
     func isCreator(_ member: Member) -> Bool { member.id == createdByID }
+
+    func role(of memberID: UUID) -> MemberRole {
+        roles[memberID] ?? (memberID == createdByID ? .owner : .editor)
+    }
 
     /// Texto que se comparte para invitar a alguien al grupo.
     var invitationMessage: String {

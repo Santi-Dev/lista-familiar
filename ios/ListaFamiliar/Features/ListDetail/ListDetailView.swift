@@ -4,24 +4,27 @@ struct ListDetailView: View {
     let listID: UUID
 
     @Environment(ListsStore.self) private var lists
+    @Environment(GroupStore.self) private var group
+    @Environment(SessionStore.self) private var session
     @Environment(\.dismiss) private var dismiss
     @State private var filter: ItemCategory?
     @State private var isAdding = false
     @State private var editing: ListItem?
-    @State private var isRenaming = false
-    @State private var renameText = ""
+    @State private var isEditingList = false
     @State private var isConfirmingDelete = false
     @State private var toast: String?
 
     private var list: ShoppingList? { lists.list(listID) }
     private var items: [ListItem] { lists.items(in: listID) }
     private var sections: [ItemSection] { items.sectioned(filter: filter) }
+    /// Los lectores consultan la lista, pero no la cambian.
+    private var canEdit: Bool { group.role(of: session.user?.id).canEdit }
 
     var body: some View {
         content
             .toast($toast) // antes del botón inferior, para que el aviso quede encima de él
             .safeAreaInset(edge: .bottom) {
-                if list != nil {
+                if list != nil && canEdit {
                     Button("Añadir artículo", systemImage: "plus") { isAdding = true }
                         .buttonStyle(.primary)
                         .padding(.horizontal, Theme.Spacing.lg)
@@ -31,16 +34,12 @@ struct ListDetailView: View {
             .screenBackground()
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) { listMenu }
-            }
-            .alert("Renombrar lista", isPresented: $isRenaming) {
-                TextField("Nombre", text: $renameText)
-                Button("Cancelar", role: .cancel) {}
-                Button("Guardar") {
-                    let name = renameText
-                    run { try await lists.rename(listID, to: name) }
+                if canEdit {
+                    ToolbarItem(placement: .topBarTrailing) { listMenu }
                 }
-                .disabled(!NameInput.isValid(renameText))
+            }
+            .sheet(isPresented: $isEditingList) {
+                if let list { ListFormSheet(mode: .edit(list)) }
             }
             .confirmationDialog("¿Eliminar la lista? Se borrarán todos sus artículos.",
                                 isPresented: $isConfirmingDelete, titleVisibility: .visible) {
@@ -86,17 +85,35 @@ struct ListDetailView: View {
     }
 
     private func header(_ list: ShoppingList) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             Text(list.name)
-                .font(.title2.bold())
+                .font(.headlineLarge)
                 .foregroundStyle(.textPrimary)
                 .lineLimit(3)
                 .accessibilityAddTraits(.isHeader)
-            Text("\(list.purchasedCount)/\(list.itemCount) comprados")
-                .font(.subheadline)
-                .foregroundStyle(.textSecondary)
-                .contentTransition(.numericText())
+            if list.itemCount > 0 {
+                VStack(spacing: Theme.Spacing.sm) {
+                    HStack {
+                        Label("\(list.purchasedCount) de \(list.itemCount) artículos listos", systemImage: "checklist")
+                            .foregroundStyle(.textPrimary)
+                            .contentTransition(.numericText())
+                        Spacer(minLength: Theme.Spacing.sm)
+                        Text(list.progress, format: .percent.precision(.fractionLength(0)))
+                            .foregroundStyle(.brand)
+                    }
+                    .font(.labelLarge)
+                    ProgressBar(value: list.progress)
+                }
+                .padding(Theme.Spacing.md)
+                .cardSurface()
                 .animation(.default, value: list.purchasedCount)
+                .accessibilityElement(children: .combine)
+            }
+            if !canEdit {
+                Label("Tu rol es de solo lectura", systemImage: "eye")
+                    .font(.bodyMedium)
+                    .foregroundStyle(.textSecondary)
+            }
             if list.isArchived {
                 HStack {
                     Label("Lista archivada", systemImage: "archivebox.fill")
@@ -104,7 +121,7 @@ struct ListDetailView: View {
                     Button("Desarchivar") { setArchived(false) }
                         .fontWeight(.semibold)
                 }
-                .font(.subheadline)
+                .font(.bodyMedium)
                 .foregroundStyle(.highlight)
                 .padding(Theme.Spacing.sm)
                 .padding(.horizontal, Theme.Spacing.xs)
@@ -133,27 +150,37 @@ struct ListDetailView: View {
             ForEach(sections) { section in
                 Section {
                     ForEach(section.items) { item in
-                        ItemRow(item: item, onToggle: { toggle(item) }, onEdit: { editing = item })
+                        ItemRow(item: item, isEditable: canEdit, onToggle: { toggle(item) }, onEdit: { editing = item })
                             .swipeActions(edge: .trailing) {
-                                Button("Eliminar", systemImage: "trash", role: .destructive) {
-                                    run { try await lists.deleteItem(item) }
+                                if canEdit {
+                                    Button("Eliminar", systemImage: "trash", role: .destructive) {
+                                        run { try await lists.deleteItem(item) }
+                                    }
                                 }
                             }
                             .swipeActions(edge: .leading) {
-                                Button(item.isPurchased ? "Pendiente" : "Comprado",
-                                       systemImage: item.isPurchased ? "arrow.uturn.backward" : "checkmark") {
-                                    toggle(item)
+                                if canEdit {
+                                    Button(item.isPurchased ? "Pendiente" : "Comprado",
+                                           systemImage: item.isPurchased ? "arrow.uturn.backward" : "checkmark") {
+                                        toggle(item)
+                                    }
+                                    .tint(.brand)
                                 }
-                                .tint(.brand)
                             }
                     }
                 } header: {
-                    HStack(spacing: Theme.Spacing.xs) {
-                        Image(systemName: section.category.symbol)
-                            .foregroundStyle(.brand)
+                    HStack(spacing: Theme.Spacing.sm) {
+                        Circle()
+                            .fill(section.category.tint)
+                            .frame(width: 9, height: 9)
                         Text(section.category.title)
+                            .font(.headlineSmall)
+                            .foregroundStyle(.textPrimary)
                         if section.pendingCount > 0 { CountBadge(count: section.pendingCount) }
                     }
+                    .textCase(nil)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityAddTraits(.isHeader)
                 }
             }
         }
@@ -164,11 +191,12 @@ struct ListDetailView: View {
 
     private var listMenu: some View {
         Menu {
-            Button("Renombrar lista", systemImage: "pencil") {
-                renameText = list?.name ?? ""
-                isRenaming = true
-            }
+            Button("Editar lista", systemImage: "pencil") { isEditingList = true }
             if let list {
+                Button(list.isPinned ? "Quitar de fijadas" : "Fijar al inicio",
+                       systemImage: list.isPinned ? "pin.slash" : "pin") {
+                    run { try await lists.setPinned(!list.isPinned, listID: listID) }
+                }
                 Button(list.isArchived ? "Desarchivar lista" : "Archivar lista", systemImage: "archivebox") {
                     setArchived(!list.isArchived)
                 }

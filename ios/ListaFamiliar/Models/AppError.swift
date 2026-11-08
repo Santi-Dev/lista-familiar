@@ -8,6 +8,8 @@ enum AppError: LocalizedError, Equatable, Sendable {
     case emailConfirmationRequired
     case notInGroup
     case notFound
+    /// La política de seguridad del servidor rechaza el cambio (por ejemplo, un lector que intenta editar).
+    case forbidden
     case offline
     /// Mensaje legible que viene del servidor (por ejemplo, de una excepción de una función SQL).
     case server(String)
@@ -20,6 +22,7 @@ enum AppError: LocalizedError, Equatable, Sendable {
         case .emailConfirmationRequired: "Confirma tu correo para continuar."
         case .notInGroup: "Todavía no perteneces a ningún grupo."
         case .notFound: "Esta lista ya no existe."
+        case .forbidden: "Tu rol es de solo lectura: no puedes hacer este cambio."
         case .offline: "No hay conexión. Inténtalo de nuevo."
         case .server(let message): message
         case .unknown: "Algo salió mal. Inténtalo de nuevo."

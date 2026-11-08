@@ -48,7 +48,10 @@ struct MainTabView: View {
     private func pollWhileActive() async {
         while !Task.isCancelled {
             try? await Task.sleep(for: .seconds(30))
-            if scenePhase == .active { await lists.refresh() }
+            if scenePhase == .active {
+                await lists.refresh()
+                await group.load() // los roles pueden haber cambiado desde otro móvil
+            }
         }
     }
 }

@@ -73,9 +73,20 @@ Además refresca cada 30 s en primer plano y al volver a la app, por si se cae l
 ## Sistema de diseño
 - Colores en `Resources/Assets.xcassets` con variante oscura; Xcode genera `Color.brand`, `.highlight`, `.appBackground`,
   `.surface`, `.textPrimary`, `.textSecondary` y `.hairline`.
-- `appStyle()` aplica en la raíz SF Pro Rounded, el tinte de marca y el formato de fechas en español.
+- Tipografía: Plus Jakarta Sans (titulares) e Inter (cuerpo y etiquetas), empaquetadas en `Resources/Fonts` y registradas al
+  arrancar con `FontRegistry` (sin tocar el Info.plist). `Font.displayLarge`, `.headlineSmall`, `.bodyMedium`, `.labelMedium`… en `Theme.swift`
+  escalan con Dynamic Type. `appStyle()` fija Inter como fuente por defecto, el tinte de marca y el formato de fechas en español.
+- Componentes comunes en `DesignSystem/`: avatares, iconos, etiquetas y barra de progreso (`Identity.swift`), campos con icono,
+  contraseña con ojo y código en casillas (`Components.swift`, `Fields.swift`) y los colores por categoría, icono de lista y rol
+  (`CategoryStyle.swift`).
 - Liquid Glass en iOS 26+ (`brandSurface`, `neutralSurface`, `chipSurface`, `floatingSurface`) con alternativa sólida
   para iOS 18-25. Bajo el cristal tintado hay un relleno sólido para que el texto mantenga el contraste siempre.
+
+## Roles de miembro
+`OWNER` (crea el grupo), `ADMIN`, `EDITOR` (quien se une) y `VIEWER` (solo lectura). El rol vive en `profiles.role` y solo cambia con
+la función `set_member_role` (el propietario no cambia; un administrador solo gestiona editores y lectores). Las políticas RLS impiden
+escribir a los lectores y la app lo refleja con `GroupStore.role(of:)` y `MemberRole.canEdit`. Si se va el propietario, hereda el grupo
+un administrador o, si no hay, quien lleva más tiempo (`leave_family_group`).
 
 ## Seguridad
 - La app solo conoce la clave pública `anon`. El control de acceso real está en las políticas RLS de `supabase/migrations/`.

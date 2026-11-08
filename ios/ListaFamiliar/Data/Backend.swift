@@ -13,6 +13,8 @@ protocol Backend: Sendable {
     func signIn(email: String, password: String) async throws -> User
     func signUp(name: String, email: String, password: String) async throws -> User
     func signOut() async
+    /// Envía el correo para restablecer la contraseña. No revela si el correo tiene cuenta.
+    func sendPasswordReset(email: String) async throws
     /// Borra la cuenta y todos sus datos (función SQL `delete_my_account`).
     func deleteAccount() async throws
 
@@ -22,11 +24,13 @@ protocol Backend: Sendable {
     func createGroup(named name: String) async throws -> FamilyGroup
     func joinGroup(code: String) async throws -> FamilyGroup
     func leaveGroup() async throws
+    /// Cambia el rol de un miembro (función SQL `set_member_role`) y devuelve el grupo actualizado.
+    func setMemberRole(_ role: MemberRole, memberID: UUID) async throws -> FamilyGroup
 
     // MARK: Listas
     func fetchLists(archived: Bool) async throws -> [ShoppingList]
     func fetchList(id: UUID) async throws -> ShoppingList
-    func createList(named name: String, groupID: UUID) async throws -> ShoppingList
+    func createList(_ draft: ListDraft, groupID: UUID) async throws -> ShoppingList
     func updateList(id: UUID, _ changes: ListChanges) async throws -> ShoppingList
     func deleteList(id: UUID) async throws
 

@@ -10,6 +10,8 @@ xcodebuild test -project ios/ListaFamiliar.xcodeproj -scheme ListaFamiliar \
 ## Tests unitarios (Swift Testing)
 - `ModelTests.swift`: código de invitación, borradores de artículo, agrupación por categoría, validación de credenciales
   y fechas de PostgREST.
+- `FeatureTests.swift`: cantidades (número + unidad), borradores con nota y urgente, listas con icono, tienda y fijada, roles de
+  miembro (quién puede cambiar a quién, lectores sin permiso de escritura) y recuperar contraseña.
 - `StoreTests.swift`: `SessionStore`, `GroupStore` y `ListsStore` contra `InMemoryBackend` (sin red). Incluye la vuelta
   atrás de los cambios optimistas cuando el servidor falla (`backend.failNextCall(with:)`).
 

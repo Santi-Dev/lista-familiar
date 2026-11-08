@@ -19,6 +19,8 @@ actor InMemoryBackend: Backend {
     private var nextError: AppError?
     /// Número de llamadas recibidas (para comprobar en los tests que se reutiliza la caché).
     private(set) var callCount = 0
+    /// Correos a los que se ha pedido restablecer la contraseña (para los tests).
+    private(set) var passwordResetEmails: [String] = []
 
     init(
         accounts: [Account] = [],
@@ -57,6 +59,16 @@ actor InMemoryBackend: Backend {
         if let index = accounts.firstIndex(where: { $0.user.id == user.id }) { accounts[index].user = user }
     }
 
+    /// El usuario de la sesión, si puede editar (los lectores solo consultan).
+    @discardableResult
+    private func requireEditor() throws -> User {
+        let user = try requireUser()
+        if let group = groups.first(where: { $0.id == user.familyGroupID }), !group.role(of: user.id).canEdit {
+            throw AppError.forbidden
+        }
+        return user
+    }
+
     // MARK: - Sesión
 
     func restoreSession() async throws -> User? {
@@ -86,6 +98,12 @@ actor InMemoryBackend: Backend {
 
     func signOut() async { currentUserID = nil }
 
+    func sendPasswordReset(email: String) async throws {
+        try step()
+        // Igual que el servidor real: no se revela si el correo tiene cuenta.
+        passwordResetEmails.append(email)
+    }
+
     func deleteAccount() async throws {
         try step()
         let user = try requireUser()
@@ -108,7 +126,7 @@ actor InMemoryBackend: Backend {
         guard !user.hasFamilyGroup else { throw AppError.server("Ya perteneces a un grupo") }
         let group = FamilyGroup(
             id: UUID(), name: NameInput.clean(name), inviteCode: Self.makeInviteCode(),
-            createdByID: user.id, members: [user.asMember], createdAt: clock())
+            createdByID: user.id, members: [user.asMember], createdAt: clock(), roles: [user.id: .owner])
         groups.append(group)
         user.familyGroupID = group.id
         updateUser(user)
@@ -123,6 +141,7 @@ actor InMemoryBackend: Backend {
             throw AppError.server("Código de invitación no válido")
         }
         groups[index].members.append(user.asMember)
+        groups[index].roles[user.id] = .editor
         user.familyGroupID = groups[index].id
         updateUser(user)
         return groups[index]
@@ -132,15 +151,41 @@ actor InMemoryBackend: Backend {
         try step()
         var user = try requireUser()
         guard let groupID = user.familyGroupID, let index = groups.firstIndex(where: { $0.id == groupID }) else { return }
+        let leavingRole = groups[index].role(of: user.id)
         groups[index].members.removeAll { $0.id == user.id }
+        groups[index].roles[user.id] = nil
         if groups[index].members.isEmpty {
             groups.remove(at: index)
             let listIDs = Set(lists.map(\.id))
             lists.removeAll()
             items.removeAll { listIDs.contains($0.listID) }
+        } else if leavingRole == .owner {
+            // Igual que `leave_family_group`: hereda el grupo un administrador o, si no, quien lleva más tiempo.
+            let successor = groups[index].members.first { groups[index].role(of: $0.id) == .admin }
+                ?? groups[index].members[0]
+            groups[index].roles[successor.id] = .owner
         }
         user.familyGroupID = nil
         updateUser(user)
+    }
+
+    func setMemberRole(_ role: MemberRole, memberID: UUID) async throws -> FamilyGroup {
+        try step()
+        let user = try requireUser()
+        guard let index = groups.firstIndex(where: { $0.id == user.familyGroupID }) else { throw AppError.notInGroup }
+        let actorRole = groups[index].role(of: user.id)
+        guard actorRole.canManageRoles else { throw AppError.server("No tienes permiso para cambiar roles.") }
+        guard groups[index].members.contains(where: { $0.id == memberID }) else {
+            throw AppError.server("Esa persona no pertenece a tu grupo.")
+        }
+        let targetRole = groups[index].role(of: memberID)
+        guard actorRole.assignableRoles(to: targetRole).contains(role) else {
+            throw AppError.server(targetRole == .owner
+                ? "El propietario no se puede cambiar."
+                : "Solo el propietario gestiona a los administradores.")
+        }
+        groups[index].roles[memberID] = role
+        return groups[index]
     }
 
     private static func makeInviteCode() -> String {
@@ -174,27 +219,33 @@ actor InMemoryBackend: Backend {
         return summary(list)
     }
 
-    func createList(named name: String, groupID: UUID) async throws -> ShoppingList {
+    func createList(_ draft: ListDraft, groupID: UUID) async throws -> ShoppingList {
         try step()
-        let user = try requireUser()
+        let user = try requireEditor()
         let list = ShoppingList(
-            id: UUID(), name: NameInput.clean(name), isArchived: false, createdBy: user.asMember,
-            itemCount: 0, purchasedCount: 0, createdAt: clock(), updatedAt: clock())
+            id: UUID(), name: draft.cleanName, isArchived: false, createdBy: user.asMember,
+            itemCount: 0, purchasedCount: 0, createdAt: clock(), updatedAt: clock(),
+            icon: draft.icon, store: draft.cleanStore, isPinned: draft.isPinned)
         lists.append(list)
         return list
     }
 
     func updateList(id: UUID, _ changes: ListChanges) async throws -> ShoppingList {
         try step()
+        try requireEditor()
         guard let index = lists.firstIndex(where: { $0.id == id }) else { throw AppError.notFound }
         if let name = changes.name { lists[index].name = name }
         if let isArchived = changes.isArchived { lists[index].isArchived = isArchived }
+        if let icon = changes.icon { lists[index].icon = icon }
+        if let store = changes.store { lists[index].store = store }
+        if let isPinned = changes.isPinned { lists[index].isPinned = isPinned }
         lists[index].updatedAt = clock()
         return summary(lists[index])
     }
 
     func deleteList(id: UUID) async throws {
         try step()
+        try requireEditor()
         lists.removeAll { $0.id == id }
         items.removeAll { $0.listID == id }
     }
@@ -207,14 +258,25 @@ actor InMemoryBackend: Backend {
         return items.filter { $0.listID == listID }.sorted { $0.createdAt < $1.createdAt }
     }
 
+    /// La persona asignada tiene que ser del grupo (igual que el trigger `item_before_write`).
+    private func assignee(_ id: UUID?) throws -> Member? {
+        guard let id else { return nil }
+        guard let member = groups.flatMap(\.members).first(where: { $0.id == id }) else {
+            throw AppError.server("La persona asignada no pertenece al grupo.")
+        }
+        return member
+    }
+
     func createItem(in listID: UUID, _ draft: ItemDraft) async throws -> ListItem {
         try step()
-        let user = try requireUser()
+        let user = try requireEditor()
         guard lists.contains(where: { $0.id == listID }) else { throw AppError.notFound }
+        let assigned = try assignee(draft.assigneeID)
         let item = ListItem(
             id: UUID(), listID: listID, name: draft.cleanName, quantity: draft.cleanQuantity,
             category: draft.category, isPurchased: false, purchasedBy: nil, purchasedAt: nil,
-            addedBy: user.asMember, createdAt: clock(), updatedAt: clock())
+            addedBy: user.asMember, createdAt: clock(), updatedAt: clock(),
+            note: draft.cleanNote, isUrgent: draft.isUrgent, assignee: assigned)
         items.append(item)
         touch(listID: listID)
         return item
@@ -222,10 +284,14 @@ actor InMemoryBackend: Backend {
 
     func updateItem(id: UUID, _ draft: ItemDraft) async throws -> ListItem {
         try step()
+        try requireEditor()
         guard let index = items.firstIndex(where: { $0.id == id }) else { throw AppError.notFound }
         items[index].name = draft.cleanName
         items[index].quantity = draft.cleanQuantity
         items[index].category = draft.category
+        items[index].note = draft.cleanNote
+        items[index].isUrgent = draft.isUrgent
+        items[index].assignee = try assignee(draft.assigneeID)
         items[index].updatedAt = clock()
         touch(listID: items[index].listID)
         return items[index]
@@ -233,7 +299,7 @@ actor InMemoryBackend: Backend {
 
     func setPurchased(_ isPurchased: Bool, itemID: UUID) async throws -> ListItem {
         try step()
-        let user = try requireUser()
+        let user = try requireEditor()
         guard let index = items.firstIndex(where: { $0.id == itemID }) else { throw AppError.notFound }
         items[index].isPurchased = isPurchased
         items[index].purchasedBy = isPurchased ? user.asMember : nil
@@ -245,6 +311,7 @@ actor InMemoryBackend: Backend {
 
     func deleteItem(id: UUID) async throws {
         try step()
+        try requireEditor()
         guard let item = items.first(where: { $0.id == id }) else { return }
         items.removeAll { $0.id == id }
         touch(listID: item.listID)

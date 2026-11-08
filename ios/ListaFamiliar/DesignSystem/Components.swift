@@ -4,11 +4,13 @@ import SwiftUI
 /// con sus propios modificadores (`.textContentType`, `.focused`…); `isFocused` resalta el borde.
 struct LabeledField<Field: View>: View {
     let label: String
+    var icon: String?
     var isFocused: Bool
     @ViewBuilder var field: Field
 
-    init(_ label: String, isFocused: Bool = false, @ViewBuilder field: () -> Field) {
+    init(_ label: String, icon: String? = nil, isFocused: Bool = false, @ViewBuilder field: () -> Field) {
         self.label = label
+        self.icon = icon
         self.isFocused = isFocused
         self.field = field()
     }
@@ -16,10 +18,19 @@ struct LabeledField<Field: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
             Text(label)
-                .font(.caption)
-                .foregroundStyle(.textSecondary)
-            field
-                .padding()
+                .font(.labelMedium)
+                .foregroundStyle(.textPrimary)
+            HStack(spacing: Theme.Spacing.sm) {
+                if let icon {
+                    Image(systemName: icon)
+                        .foregroundStyle(.textSecondary)
+                        .frame(width: 22)
+                        .accessibilityHidden(true)
+                }
+                field
+            }
+                .padding(.horizontal, Theme.Spacing.md)
+                .padding(.vertical, 14)
                 .background(Color.surface, in: .rect(cornerRadius: Theme.Radius.field))
                 .overlay {
                     RoundedRectangle(cornerRadius: Theme.Radius.field)
@@ -37,7 +48,7 @@ struct FormErrorText: View {
     var body: some View {
         if let message {
             Text(message)
-                .font(.callout)
+                .font(.bodyMedium)
                 .foregroundStyle(.red)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .transition(.opacity)
@@ -61,11 +72,12 @@ struct EmptyStateView: View {
                 .frame(width: 96, height: 96)
                 .background(Color.brand.opacity(0.12), in: .circle)
             Text(title)
-                .font(.headline)
+                .font(.headlineSmall)
                 .foregroundStyle(.textPrimary)
                 .multilineTextAlignment(.center)
             if let message {
                 Text(message)
+                    .font(.bodyMedium)
                     .foregroundStyle(.textSecondary)
                     .multilineTextAlignment(.center)
             }
@@ -110,7 +122,7 @@ struct CountBadge: View {
 
     var body: some View {
         Text(count, format: .number)
-            .font(.caption2.weight(.semibold))
+            .font(.labelSmall)
             .monospacedDigit()
             .foregroundStyle(.white)
             .padding(.horizontal, 6)
@@ -155,7 +167,7 @@ private struct ToastModifier: ViewModifier {
             .overlay(alignment: .bottom) {
                 if let message {
                     Text(message)
-                        .font(.subheadline)
+                        .font(.bodyMedium)
                         .foregroundStyle(.textPrimary)
                         .padding(.horizontal, Theme.Spacing.md)
                         .padding(.vertical, Theme.Spacing.sm)

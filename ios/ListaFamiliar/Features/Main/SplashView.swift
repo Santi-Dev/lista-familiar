@@ -9,7 +9,7 @@ struct SplashView: View {
                 .padding(Theme.Spacing.lg)
                 .background(.white, in: .rect(cornerRadius: 20))
             Text("Lista Familiar")
-                .font(.heroTitle)
+                .font(.displayLarge)
                 .foregroundStyle(.white)
             ProgressView()
                 .tint(.white)

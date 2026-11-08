@@ -218,16 +218,16 @@ Grouped form, with data from `GET /api/family-groups/me` plus the session.
 **Appearance**: light only; it is used in bright stores.
 
 **Palette** (`Theme.Colors`)
-- background `#F6F4EE` (warm paper)
+- background `#F4F6F4` (pale sage)
 - surface `#FFFFFF`
-- textPrimary `#1E2A23`
-- textSecondary `#5F6B64`
-- brand `#2E7D4F` (leaf green; used for primary buttons, checkmarks and the FAB)
-- accent `#E07A2E` (citrus orange; used for count badges and the invite code highlight only)
-- separator `#E4E0D6`
+- textPrimary `#14251B`
+- textSecondary `#5A685E`
+- brand `#256A42` (emerald; used for primary buttons, checkmarks and the FAB)
+- accent `#D97706` (amber; used for count badges and the invite code highlight only)
+- separator `#E3E8E3`
 - destructive: system red
 
-**Typography**: SF Pro Rounded throughout (`.fontDesign(.rounded)`) for a family-friendly feel.
+**Typography**: Plus Jakarta Sans for headlines and Inter for body and labels (bundled in `Resources/Fonts`), taken from the Stitch design.
 - display 34 bold
 - title 28 bold
 - headline 17 semibold

@@ -6,6 +6,8 @@ import Foundation
 struct MemberRecord: Decodable, Sendable {
     let id: UUID
     let name: String
+    /// Solo viene en la consulta del grupo (`GroupRecord.columns`).
+    let role: String?
     var model: Member { Member(id: id, name: name) }
 }
 
@@ -23,7 +25,7 @@ struct ProfileRecord: Decodable, Sendable {
 
 struct GroupRecord: Decodable, Sendable {
     // `family_groups` y `profiles` tienen dos relaciones (miembros y creador): el hint evita PGRST201.
-    static let columns = "id,name,invite_code,created_by_id,created_at,members:profiles!family_group_id(id,name)"
+    static let columns = "id,name,invite_code,created_by_id,created_at,members:profiles!family_group_id(id,name,role)"
     let id: UUID
     let name: String
     let inviteCode: String
@@ -42,15 +44,21 @@ struct GroupRecord: Decodable, Sendable {
         FamilyGroup(
             id: id, name: name, inviteCode: inviteCode, createdByID: createdByID,
             members: members.map(\.model).sorted { $0.name.localizedCompare($1.name) == .orderedAscending },
-            createdAt: PostgresDate.parse(createdAt))
+            createdAt: PostgresDate.parse(createdAt),
+            roles: Dictionary(
+                members.map { ($0.id, MemberRole(databaseValue: $0.role ?? "")) },
+                uniquingKeysWith: { first, _ in first }))
     }
 }
 
 struct ListRecord: Decodable, Sendable {
-    static let columns = "id,name,is_archived,created_at,updated_at,created_by:profiles!created_by_id(id,name),list_items(is_purchased)"
+    static let columns = "id,name,is_archived,icon,store,is_pinned,created_at,updated_at,created_by:profiles!created_by_id(id,name),list_items(is_purchased)"
     let id: UUID
     let name: String
     let isArchived: Bool
+    let icon: String
+    let store: String?
+    let isPinned: Bool
     let createdAt: String
     let updatedAt: String
     let createdBy: MemberRecord?
@@ -62,8 +70,9 @@ struct ListRecord: Decodable, Sendable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, name
+        case id, name, icon, store
         case isArchived = "is_archived"
+        case isPinned = "is_pinned"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         case createdBy = "created_by"
@@ -75,33 +84,39 @@ struct ListRecord: Decodable, Sendable {
         return ShoppingList(
             id: id, name: name, isArchived: isArchived, createdBy: createdBy?.model,
             itemCount: flags.count, purchasedCount: flags.count(where: \.isPurchased),
-            createdAt: PostgresDate.parse(createdAt), updatedAt: PostgresDate.parse(updatedAt))
+            createdAt: PostgresDate.parse(createdAt), updatedAt: PostgresDate.parse(updatedAt),
+            icon: ListIcon(databaseValue: icon), store: store, isPinned: isPinned)
     }
 }
 
 struct ItemRecord: Decodable, Sendable {
-    static let columns = "id,shopping_list_id,name,quantity,category,is_purchased,purchased_at,created_at,updated_at,added_by:profiles!added_by_id(id,name),purchased_by:profiles!purchased_by_id(id,name)"
+    static let columns = "id,shopping_list_id,name,quantity,category,note,is_urgent,is_purchased,purchased_at,created_at,updated_at,added_by:profiles!added_by_id(id,name),purchased_by:profiles!purchased_by_id(id,name),assigned_to:profiles!assigned_to_id(id,name)"
     let id: UUID
     let listID: UUID
     let name: String
     let quantity: String?
     let category: String
+    let note: String?
+    let isUrgent: Bool
     let isPurchased: Bool
     let purchasedAt: String?
     let createdAt: String
     let updatedAt: String
     let addedBy: MemberRecord?
     let purchasedBy: MemberRecord?
+    let assignedTo: MemberRecord?
 
     enum CodingKeys: String, CodingKey {
-        case id, name, quantity, category
+        case id, name, quantity, category, note
         case listID = "shopping_list_id"
+        case isUrgent = "is_urgent"
         case isPurchased = "is_purchased"
         case purchasedAt = "purchased_at"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         case addedBy = "added_by"
         case purchasedBy = "purchased_by"
+        case assignedTo = "assigned_to"
     }
 
     var model: ListItem {
@@ -109,7 +124,8 @@ struct ItemRecord: Decodable, Sendable {
             id: id, listID: listID, name: name, quantity: quantity,
             category: ItemCategory(databaseValue: category), isPurchased: isPurchased,
             purchasedBy: purchasedBy?.model, purchasedAt: purchasedAt.map(PostgresDate.parse),
-            addedBy: addedBy?.model, createdAt: PostgresDate.parse(createdAt), updatedAt: PostgresDate.parse(updatedAt))
+            addedBy: addedBy?.model, createdAt: PostgresDate.parse(createdAt), updatedAt: PostgresDate.parse(updatedAt),
+            note: note, isUrgent: isUrgent, assignee: assignedTo?.model)
     }
 }
 
@@ -119,32 +135,56 @@ struct ListInsert: Encodable, Sendable {
     let name: String
     let familyGroupID: UUID
     let createdByID: UUID
+    let icon: String
+    let store: String?
+    let isPinned: Bool
+
+    init(draft: ListDraft, familyGroupID: UUID, createdByID: UUID) {
+        name = draft.cleanName
+        self.familyGroupID = familyGroupID
+        self.createdByID = createdByID
+        icon = draft.icon.rawValue
+        store = draft.cleanStore
+        isPinned = draft.isPinned
+    }
 
     enum CodingKeys: String, CodingKey {
-        case name
+        case name, icon, store
         case familyGroupID = "family_group_id"
         case createdByID = "created_by_id"
+        case isPinned = "is_pinned"
     }
 }
 
 struct ListUpdate: Encodable, Sendable {
     let name: String?
     let isArchived: Bool?
+    let icon: String?
+    /// Doble opcional para la tienda: `.some(nil)` la borra, `nil` no la toca.
+    let store: String??
+    let isPinned: Bool?
 
     init(_ changes: ListChanges) {
         name = changes.name
         isArchived = changes.isArchived
+        icon = changes.icon?.rawValue
+        store = changes.store
+        isPinned = changes.isPinned
     }
 
     enum CodingKeys: String, CodingKey {
-        case name
+        case name, icon, store
         case isArchived = "is_archived"
+        case isPinned = "is_pinned"
     }
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(name, forKey: .name)
         try container.encodeIfPresent(isArchived, forKey: .isArchived)
+        try container.encodeIfPresent(icon, forKey: .icon)
+        if let store { try container.encode(store, forKey: .store) }
+        try container.encodeIfPresent(isPinned, forKey: .isPinned)
     }
 }
 
@@ -153,31 +193,45 @@ struct ItemInsert: Encodable, Sendable {
     let name: String
     let quantity: String?
     let category: String
+    let note: String?
+    let isUrgent: Bool
+    let assignedToID: UUID?
 
     init(listID: UUID, draft: ItemDraft) {
         self.listID = listID
         name = draft.cleanName
         quantity = draft.cleanQuantity
         category = draft.category.rawValue
+        note = draft.cleanNote
+        isUrgent = draft.isUrgent
+        assignedToID = draft.assigneeID
     }
 
     enum CodingKeys: String, CodingKey {
-        case name, quantity, category
+        case name, quantity, category, note
         case listID = "shopping_list_id"
+        case isUrgent = "is_urgent"
+        case assignedToID = "assigned_to_id"
     }
 }
 
 struct ItemUpdate: Encodable, Sendable {
-    /// Doble opcional para la cantidad: `.some(nil)` la borra, `nil` no la toca.
+    /// Doble opcional para los campos que se pueden borrar: `.some(nil)` los borra, `nil` no los toca.
     var name: String?
     var quantity: String??
     var category: String?
+    var note: String??
+    var isUrgent: Bool?
+    var assignedToID: UUID??
     var isPurchased: Bool?
 
     init(draft: ItemDraft) {
         name = draft.cleanName
         quantity = .some(draft.cleanQuantity)
         category = draft.category.rawValue
+        note = .some(draft.cleanNote)
+        isUrgent = draft.isUrgent
+        assignedToID = .some(draft.assigneeID)
     }
 
     init(isPurchased: Bool) {
@@ -185,7 +239,9 @@ struct ItemUpdate: Encodable, Sendable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case name, quantity, category
+        case name, quantity, category, note
+        case isUrgent = "is_urgent"
+        case assignedToID = "assigned_to_id"
         case isPurchased = "is_purchased"
     }
 
@@ -194,6 +250,9 @@ struct ItemUpdate: Encodable, Sendable {
         try container.encodeIfPresent(name, forKey: .name)
         if let quantity { try container.encode(quantity, forKey: .quantity) }
         try container.encodeIfPresent(category, forKey: .category)
+        if let note { try container.encode(note, forKey: .note) }
+        try container.encodeIfPresent(isUrgent, forKey: .isUrgent)
+        if let assignedToID { try container.encode(assignedToID, forKey: .assignedToID) }
         try container.encodeIfPresent(isPurchased, forKey: .isPurchased)
     }
 }

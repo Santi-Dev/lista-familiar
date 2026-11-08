@@ -22,8 +22,12 @@ final class ListsStore {
 
     // MARK: - Lectura
 
+    /// Las fijadas primero; dentro de cada grupo, las modificadas más recientemente.
     func lists(archived: Bool) -> [ShoppingList] {
-        lists.values.filter { $0.isArchived == archived }.sorted { $0.updatedAt > $1.updatedAt }
+        lists.values.filter { $0.isArchived == archived }.sorted { lhs, rhs in
+            if lhs.isPinned != rhs.isPinned { return lhs.isPinned }
+            return lhs.updatedAt > rhs.updatedAt
+        }
     }
 
     func state(archived: Bool) -> LoadState { state[archived] ?? .idle }
@@ -83,11 +87,34 @@ final class ListsStore {
     // MARK: - Listas
 
     func createList(named name: String, groupID: UUID) async throws -> ShoppingList {
-        let list = try await backend.createList(named: NameInput.clean(name), groupID: groupID)
+        try await createList(ListDraft(name: name), groupID: groupID)
+    }
+
+    func createList(_ draft: ListDraft, groupID: UUID) async throws -> ShoppingList {
+        let list = try await backend.createList(draft, groupID: groupID)
         lists[list.id] = list
         items[list.id] = []
         itemsState[list.id] = .loaded
         return list
+    }
+
+    /// Guarda nombre, icono, tienda y «fijada» a la vez.
+    func update(_ listID: UUID, with draft: ListDraft) async throws {
+        guard draft.isValid else { return }
+        try await mutate(listID, {
+            $0.name = draft.cleanName
+            $0.icon = draft.icon
+            $0.store = draft.cleanStore
+            $0.isPinned = draft.isPinned
+        }) {
+            try await self.backend.updateList(id: listID, ListChanges(draft: draft))
+        }
+    }
+
+    func setPinned(_ isPinned: Bool, listID: UUID) async throws {
+        try await mutate(listID, { $0.isPinned = isPinned }) {
+            try await self.backend.updateList(id: listID, ListChanges(isPinned: isPinned))
+        }
     }
 
     func rename(_ listID: UUID, to name: String) async throws {
@@ -150,8 +177,18 @@ final class ListsStore {
         return item
     }
 
-    func updateItem(_ item: ListItem, with draft: ItemDraft) async throws {
-        try await mutateItem(item, { $0.name = draft.cleanName; $0.quantity = draft.cleanQuantity; $0.category = draft.category }) {
+    /// `members` sirve para mostrar al instante a quién se ha asignado el artículo; la respuesta del servidor
+    /// sustituye después al valor local.
+    func updateItem(_ item: ListItem, with draft: ItemDraft, members: [Member] = []) async throws {
+        let assignee = draft.assigneeID.flatMap { id in members.first(where: { $0.id == id }) }
+        try await mutateItem(item, {
+            $0.name = draft.cleanName
+            $0.quantity = draft.cleanQuantity
+            $0.category = draft.category
+            $0.note = draft.cleanNote
+            $0.isUrgent = draft.isUrgent
+            $0.assignee = assignee
+        }) {
             try await self.backend.updateItem(id: item.id, draft)
         }
     }

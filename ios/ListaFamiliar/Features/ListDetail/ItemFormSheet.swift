@@ -13,6 +13,8 @@ struct ItemFormSheet: View {
     let onSaved: (String) -> Void
 
     @Environment(ListsStore.self) private var lists
+    @Environment(GroupStore.self) private var groups
+    @Environment(SessionStore.self) private var session
     @Environment(\.dismiss) private var dismiss
     @State private var draft: ItemDraft
     @State private var isSaving = false
@@ -20,7 +22,7 @@ struct ItemFormSheet: View {
     @State private var toast: String?
     @FocusState private var focus: Field?
 
-    private enum Field { case name, quantity }
+    private enum Field { case name, quantity, note }
 
     init(listID: UUID, mode: Mode, onSaved: @escaping (String) -> Void) {
         self.listID = listID
@@ -37,37 +39,60 @@ struct ItemFormSheet: View {
         return nil
     }
 
+    private var members: [Member] { groups.group?.members ?? [] }
     private var canSave: Bool { draft.isValid && !isSaving }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: Theme.Spacing.md) {
-                    LabeledField("Nombre", isFocused: focus == .name) {
+                    LabeledField("Nombre", icon: draft.category.symbol, isFocused: focus == .name) {
                         TextField("Leche", text: $draft.name)
                             .focused($focus, equals: .name)
                             .submitLabel(.next)
-                            .onSubmit { focus = .quantity }
-                    }
-                    LabeledField("Cantidad (opcional)", isFocused: focus == .quantity) {
-                        TextField("2 litros", text: $draft.quantity)
-                            .focused($focus, equals: .quantity)
-                            .submitLabel(.done)
-                            .onSubmit { save(close: editingItem != nil) }
+                            .onSubmit { focus = .note }
                     }
 
                     VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                         Text("Categoría")
-                            .font(.caption)
-                            .foregroundStyle(.textSecondary)
+                            .font(.labelMedium)
+                            .foregroundStyle(.textPrimary)
                         CategoryPicker(selection: $draft.category)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    quantitySection
+                    if members.count > 1 { assigneeSection }
+
+                    Toggle(isOn: $draft.isUrgent) {
+                        Label {
+                            Text("Marcar como urgente")
+                                .foregroundStyle(.textPrimary)
+                        } icon: {
+                            Image(systemName: "flame.fill").foregroundStyle(.highlight)
+                        }
+                        .font(.labelLarge)
+                    }
+                    .tint(.highlight)
+                    .padding(Theme.Spacing.md)
+                    .cardSurface()
+
+                    LabeledField("Nota (opcional)", icon: "text.alignleft", isFocused: focus == .note) {
+                        TextField("Marca Oatly o Hacendado", text: $draft.note, axis: .vertical)
+                            .lineLimit(1...3)
+                            .focused($focus, equals: .note)
+                            .onChange(of: draft.note) { _, value in
+                                if value.count > ItemDraft.maxNoteLength {
+                                    draft.note = String(value.prefix(ItemDraft.maxNoteLength))
+                                }
+                            }
                     }
 
                     FormErrorText(message: errorMessage)
 
                     if let item = editingItem {
                         Button("Eliminar artículo", systemImage: "trash", role: .destructive) { delete(item) }
-                            .font(.headline)
+                            .font(.headlineSmall)
                             .foregroundStyle(.red)
                             .frame(maxWidth: .infinity, minHeight: Theme.controlHeight)
                     } else {
@@ -79,6 +104,7 @@ struct ItemFormSheet: View {
                 .padding(Theme.Spacing.lg)
             }
             .scrollDismissesKeyboard(.interactively)
+            .screenBackground()
             .navigationTitle(editingItem == nil ? "Nuevo artículo" : "Editar artículo")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -96,16 +122,159 @@ struct ItemFormSheet: View {
         .presentationDetents([.medium, .large])
     }
 
+    // MARK: - Cantidad
+
+    private var quantityParts: QuantityParts? { QuantityParts(text: draft.quantity) }
+    /// Cantidad escrita a mano que el selector no entiende (por ejemplo, «3 bolsas»): se edita como texto.
+    private var hasCustomQuantity: Bool { draft.cleanQuantity != nil && quantityParts == nil }
+
+    private var quantitySection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            HStack {
+                Text("Cantidad")
+                    .font(.labelMedium)
+                    .foregroundStyle(.textPrimary)
+                Spacer()
+                Text("Opcional")
+                    .font(.bodySmall)
+                    .foregroundStyle(.textSecondary)
+            }
+            if hasCustomQuantity {
+                HStack {
+                    TextField("2 litros", text: $draft.quantity)
+                        .focused($focus, equals: .quantity)
+                    Button("Usar selector") { draft.quantity = "" }
+                        .font(.labelMedium)
+                        .foregroundStyle(.brand)
+                }
+            } else {
+                HStack(spacing: Theme.Spacing.md) {
+                    Button { adjustQuantity(by: -1) } label: {
+                        Image(systemName: "minus")
+                            .frame(width: 40, height: 40)
+                            .background(Color.appBackground, in: .circle)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Menos cantidad")
+                    Text(quantityParts?.amountText ?? "–")
+                        .font(.headlineMedium)
+                        .foregroundStyle(.textPrimary)
+                        .frame(minWidth: 44)
+                        .contentTransition(.numericText())
+                    Button { adjustQuantity(by: 1) } label: {
+                        Image(systemName: "plus")
+                            .foregroundStyle(.white)
+                            .frame(width: 40, height: 40)
+                            .background(Color.brand, in: .circle)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Más cantidad")
+                    Spacer(minLength: 0)
+                }
+                .animation(.default, value: draft.quantity)
+                .sensoryFeedback(.selection, trigger: draft.quantity)
+
+                ScrollView(.horizontal) {
+                    HStack(spacing: Theme.Spacing.sm) {
+                        ForEach(QuantityParts.units) { unit in
+                            let isSelected = quantityParts?.unit == unit.symbol
+                            Button { selectUnit(unit.symbol) } label: {
+                                Text(unit.symbol)
+                                    .font(.labelMedium)
+                                    .foregroundStyle(isSelected ? Color.white : Color.textPrimary)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 9)
+                                    .chipSurface(isSelected: isSelected)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityAddTraits(isSelected ? .isSelected : [])
+                        }
+                    }
+                }
+                .scrollIndicators(.hidden)
+            }
+        }
+        .padding(Theme.Spacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardSurface()
+    }
+
+    private func adjustQuantity(by direction: Double) {
+        let current = quantityParts ?? QuantityParts(amount: 0, unit: nil)
+        let amount = max(0, current.amount + direction * current.step)
+        draft.quantity = amount == 0 ? "" : QuantityParts(amount: amount, unit: current.unit).text
+    }
+
+    private func selectUnit(_ symbol: String) {
+        var current = quantityParts ?? QuantityParts(amount: 1, unit: nil)
+        current.unit = current.unit == symbol ? nil : symbol
+        draft.quantity = current.text
+    }
+
+    // MARK: - Asignar a
+
+    private var assigneeSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            HStack {
+                Text("Asignar a")
+                    .font(.labelMedium)
+                    .foregroundStyle(.textPrimary)
+                Spacer()
+                Text("Quién lo compra")
+                    .font(.bodySmall)
+                    .foregroundStyle(.textSecondary)
+            }
+            ScrollView(.horizontal) {
+                HStack(spacing: Theme.Spacing.sm) {
+                    assigneeChip(title: "Todos", name: nil, id: nil)
+                    ForEach(members) { member in
+                        assigneeChip(
+                            title: member.id == session.user?.id ? "\(member.name) (tú)" : member.name,
+                            name: member.name, id: member.id)
+                    }
+                }
+                .padding(.horizontal, Theme.Spacing.lg)
+            }
+            .padding(.horizontal, -Theme.Spacing.lg)
+            .scrollIndicators(.hidden)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func assigneeChip(title: String, name: String?, id: UUID?) -> some View {
+        let isSelected = draft.assigneeID == id
+        return Button { draft.assigneeID = id } label: {
+            HStack(spacing: Theme.Spacing.sm) {
+                if let name {
+                    AvatarView(name: name, size: 22)
+                } else {
+                    Image(systemName: "person.2.fill")
+                }
+                Text(title)
+            }
+            .font(.labelMedium)
+            .foregroundStyle(isSelected ? Color.white : Color.textPrimary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .chipSurface(isSelected: isSelected)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    // MARK: - Acciones
+
     private func save(close: Bool) {
         guard canSave else { return }
         let draft = draft
+        let members = members
         Task {
             isSaving = true
             errorMessage = nil
             defer { isSaving = false }
             do {
                 if let item = editingItem {
-                    try await lists.updateItem(item, with: draft)
+                    try await lists.updateItem(item, with: draft, members: members)
                 } else {
                     try await lists.addItem(draft, to: listID)
                 }
@@ -146,18 +315,14 @@ private struct CategoryPicker: View {
                 let isSelected = selection == category
                 Button { selection = category } label: {
                     Label(category.title, systemImage: category.symbol)
-                        .font(.subheadline)
+                        .font(.labelMedium)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .foregroundStyle(isSelected ? Color.brand : Color.textPrimary)
-                        .background(isSelected ? Color.brand.opacity(0.12) : Color.surface,
+                        .padding(.vertical, 11)
+                        .foregroundStyle(isSelected ? Color.white : category.tint)
+                        .background(isSelected ? category.tint : category.tint.opacity(0.12),
                                     in: .rect(cornerRadius: Theme.Radius.tile))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: Theme.Radius.tile)
-                                .strokeBorder(isSelected ? Color.brand : Color.hairline, lineWidth: isSelected ? 2 : 0.5)
-                        }
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(isSelected ? .isSelected : [])

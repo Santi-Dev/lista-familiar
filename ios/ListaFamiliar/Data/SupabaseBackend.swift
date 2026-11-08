@@ -50,6 +50,12 @@ final class SupabaseBackend: Backend {
         try? await client.auth.signOut()
     }
 
+    func sendPasswordReset(email: String) async throws {
+        try await perform {
+            try await self.client.auth.resetPasswordForEmail(email, redirectTo: AppConfig.passwordResetURL)
+        }
+    }
+
     func deleteAccount() async throws {
         try await perform {
             try await self.client.rpc("delete_my_account").execute()
@@ -97,6 +103,15 @@ final class SupabaseBackend: Backend {
         try await perform { _ = try await self.client.rpc("leave_family_group").execute() }
     }
 
+    func setMemberRole(_ role: MemberRole, memberID: UUID) async throws -> FamilyGroup {
+        try await perform {
+            try await self.client
+                .rpc("set_member_role", params: ["member_id": memberID.uuidString, "new_role": role.rawValue])
+                .execute()
+            return try await self.requireGroup()
+        }
+    }
+
     private func requireGroup() async throws -> FamilyGroup {
         guard let group = try await fetchGroup() else { throw AppError.notInGroup }
         return group
@@ -126,11 +141,11 @@ final class SupabaseBackend: Backend {
         }
     }
 
-    func createList(named name: String, groupID: UUID) async throws -> ShoppingList {
+    func createList(_ draft: ListDraft, groupID: UUID) async throws -> ShoppingList {
         try await perform {
             let userID = try await self.client.auth.session.user.id
             let row: ListRecord = try await self.client.from("shopping_lists")
-                .insert(ListInsert(name: name, familyGroupID: groupID, createdByID: userID))
+                .insert(ListInsert(draft: draft, familyGroupID: groupID, createdByID: userID))
                 .select(ListRecord.columns)
                 .single()
                 .execute().value
@@ -241,6 +256,8 @@ final class SupabaseBackend: Backend {
         } catch let error as PostgrestError {
             // PGRST116: `.single()` sin filas (la lista se borró o ya no es de tu grupo).
             if error.code == "PGRST116" { throw AppError.notFound }
+            // 42501: la política RLS rechaza el cambio (hoy, solo les pasa a los lectores).
+            if error.code == "42501" { throw AppError.forbidden }
             throw AppError.server(error.message)
         } catch let error as AuthError {
             throw Self.map(error)

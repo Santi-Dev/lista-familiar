@@ -79,6 +79,72 @@ begin
   get diagnostics n = row_count;
   perform pg_temp.expect('u3 no borra listas ajenas', n, 0);
 
+  -- artículos con nota, urgente y responsable; listas con icono, tienda y fijada
+  perform pg_temp.act_as(u1);
+  update list_items set note = 'Sin lactosa', is_urgent = true, assigned_to_id = u2 where id = i;
+  select * into it from list_items where id = i;
+  perform pg_temp.expect('nota, urgente y responsable', (it.note = 'Sin lactosa' and it.is_urgent and it.assigned_to_id = u2)::int, 1);
+  failed := false; begin update list_items set assigned_to_id = u3 where id = i; exception when others then failed := true; end;
+  perform pg_temp.expect('no se asigna a alguien de fuera del grupo', failed::int, 1);
+  failed := false; begin update list_items set note = repeat('x', 281) where id = i; exception when others then failed := true; end;
+  perform pg_temp.expect('la nota tiene límite', failed::int, 1);
+  update shopping_lists set icon = 'PARTY', store = 'Mercadona', is_pinned = true where id = l;
+  perform pg_temp.expect('icono, tienda y fijada', (select count(*) from shopping_lists where id = l and icon = 'PARTY' and store = 'Mercadona' and is_pinned), 1);
+  failed := false; begin update shopping_lists set icon = 'NADA'::list_icon where id = l; exception when others then failed := true; end;
+  perform pg_temp.expect('icono desconocido rechazado', failed::int, 1);
+
+  -- roles: u1 crea el grupo (propietario) y u2 se unió (editor)
+  perform pg_temp.expect('el creador es propietario', (select count(*) from profiles where id = u1 and role = 'OWNER'), 1);
+  perform pg_temp.expect('quien se une es editor', (select count(*) from profiles where id = u2 and role = 'EDITOR'), 1);
+  perform set_member_role(u2, 'VIEWER');
+  perform pg_temp.expect('el propietario cambia roles', (select count(*) from profiles where id = u2 and role = 'VIEWER'), 1);
+  failed := false; begin perform set_member_role(u1, 'EDITOR'); exception when others then failed := true; end;
+  perform pg_temp.expect('el propietario no se puede cambiar', failed::int, 1);
+  failed := false; begin perform set_member_role(u2, 'OWNER'); exception when others then failed := true; end;
+  perform pg_temp.expect('nadie más puede ser propietario', failed::int, 1);
+  failed := false; begin update profiles set role = 'OWNER' where id = u2; exception when others then failed := true; end;
+  perform pg_temp.expect('el rol no se cambia a mano', failed::int, 1);
+
+  -- lector: ve, pero no escribe
+  perform pg_temp.act_as(u2);
+  perform pg_temp.expect('el lector ve las listas', (select count(*) from shopping_lists), 1);
+  perform pg_temp.expect('el lector ve los artículos', (select count(*) from list_items), 1);
+  failed := false; begin insert into list_items (shopping_list_id, name) values (l, 'Nada'); exception when others then failed := true; end;
+  perform pg_temp.expect('el lector no añade artículos', failed::int, 1);
+  failed := false; begin update list_items set is_purchased = true where id = i; exception when others then failed := true; end;
+  perform pg_temp.expect('el lector no marca artículos', failed::int, 1);
+  failed := false; begin insert into shopping_lists (name, family_group_id, created_by_id) values ('X', g.id, u2); exception when others then failed := true; end;
+  perform pg_temp.expect('el lector no crea listas', failed::int, 1);
+  failed := false; begin update shopping_lists set name = 'Hack' where id = l; exception when others then failed := true; end;
+  perform pg_temp.expect('el lector no edita listas', failed::int, 1);
+  delete from list_items where id = i;
+  get diagnostics n = row_count;
+  perform pg_temp.expect('el lector no borra artículos', n, 0);
+  failed := false; begin perform set_member_role(u2, 'EDITOR'); exception when others then failed := true; end;
+  perform pg_temp.expect('el lector no cambia roles', failed::int, 1);
+
+  -- administrador: gestiona editores y lectores, pero no administradores ni al propietario
+  perform pg_temp.act_as(u3);
+  perform join_family_group(code);
+  perform pg_temp.act_as(u1);
+  perform set_member_role(u2, 'ADMIN');
+  perform pg_temp.act_as(u2);
+  perform set_member_role(u3, 'VIEWER');
+  perform pg_temp.expect('el administrador cambia a un editor', (select count(*) from profiles where id = u3 and role = 'VIEWER'), 1);
+  failed := false; begin perform set_member_role(u1, 'EDITOR'); exception when others then failed := true; end;
+  perform pg_temp.expect('el administrador no toca al propietario', failed::int, 1);
+  failed := false; begin perform set_member_role(u3, 'ADMIN'); exception when others then failed := true; end;
+  perform pg_temp.expect('el administrador no crea administradores', failed::int, 1);
+
+  -- si se va el propietario, hereda el administrador; quien se va vuelve a ser editor
+  perform pg_temp.act_as(u1);
+  perform leave_family_group();
+  execute 'reset role';
+  perform pg_temp.expect('hereda el administrador', (select count(*) from profiles where id = u2 and role = 'OWNER'), 1);
+  perform pg_temp.expect('quien se va vuelve a ser editor', (select count(*) from profiles where id = u1 and role = 'EDITOR' and family_group_id is null), 1);
+  perform pg_temp.act_as(u3);
+  perform leave_family_group();
+
   -- borrado de cuenta: u1 se va y u2 conserva grupo y lista
   perform pg_temp.act_as(u1);
   perform delete_my_account();

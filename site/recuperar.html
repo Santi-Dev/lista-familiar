@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lista Familiar · Nueva contraseña</title><link rel="stylesheet" href="estilo.css">
+<style>
+  form { display:grid; gap:14px; margin-top:12px; }
+  label { font-weight:600; font-size:.95rem; }
+  input { width:100%; padding:14px; border:1px solid #c9d3cb; border-radius:14px; font:inherit; background:var(--card); color:var(--text); }
+  button { padding:14px; border:0; border-radius:999px; background:var(--brand); color:#fff; font:inherit; font-weight:700; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  .msg { margin:12px 0 0; font-weight:600; } .error { color:#b3261e; } .ok { color:var(--brand); }
+  [hidden] { display:none !important; }
+</style></head>
+<body>
+<header><h1>Lista Familiar</h1><p>Crea una contraseña nueva</p></header>
+<main>
+  <section>
+    <h2>Nueva contraseña</h2>
+    <p id="waiting">Comprobando tu enlace…</p>
+    <form id="form" hidden>
+      <div><label for="password">Contraseña nueva</label>
+        <input id="password" type="password" autocomplete="new-password" minlength="8" required placeholder="Mínimo 8 caracteres"></div>
+      <div><label for="confirm">Repite la contraseña</label>
+        <input id="confirm" type="password" autocomplete="new-password" minlength="8" required></div>
+      <button id="submit" type="submit">Guardar contraseña</button>
+    </form>
+    <p id="message" class="msg" role="status"></p>
+  </section>
+</main>
+<footer>© 2026 Lista Familiar</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+  // Los dos valores son públicos por diseño (la seguridad la aplica RLS); son los mismos que usa la app.
+  const client = supabase.createClient("https://rxvqsvjbtteejrrzfpoh.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4dnFzdmpidHRlZWpycnpmcG9oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MzYzMTYsImV4cCI6MjEwOTIxMjMxNn0.TlibVOz362jR_vQv8CP8zbby1CZB9u5E9Ry4cuaN0d8");
+  const $ = (id) => document.getElementById(id);
+  const say = (text, kind) => { $("message").textContent = text; $("message").className = "msg " + (kind || ""); };
+
+  // Si el enlace caducó o ya se usó, Supabase lo indica en el fragmento de la URL.
+  const params = new URLSearchParams(location.hash.replace(/^#/, ""));
+  if (params.get("error_description")) {
+    $("waiting").hidden = true;
+    say("Este enlace ya no es válido. Vuelve a pedir uno desde la app («¿Olvidaste tu contraseña?»).", "error");
+  }
+
+  client.auth.onAuthStateChange((event) => {
+    if (event === "PASSWORD_RECOVERY") {
+      $("waiting").hidden = true;
+      $("form").hidden = false;
+    }
+  });
+
+  $("form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const password = $("password").value;
+    if (password.length < 8) return say("La contraseña necesita al menos 8 caracteres.", "error");
+    if (password !== $("confirm").value) return say("Las contraseñas no coinciden.", "error");
+    $("submit").disabled = true;
+    const { error } = await client.auth.updateUser({ password });
+    if (error) {
+      $("submit").disabled = false;
+      return say("No se pudo guardar la contraseña. Vuelve a pedir un enlace desde la app.", "error");
+    }
+    $("form").hidden = true;
+    say("¡Listo! Ya puedes volver a la app e iniciar sesión con tu contraseña nueva.", "ok");
+    await client.auth.signOut();
+  });
+</script>
+</body></html>
