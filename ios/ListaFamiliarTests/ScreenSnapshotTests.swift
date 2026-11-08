@@ -124,11 +124,17 @@ final class ScreenSnapshotTests: XCTestCase {
         return last
     }
 
+    /// Captura en sRGB de rango estándar y la pasa por PNG, igual que la referencia guardada en disco.
+    /// Sin esto, los brillos del Liquid Glass (rango extendido) se comparan sin recortar contra un PNG
+    /// recortado, y la comparación perceptual falla aunque las imágenes sean idénticas.
     private func capture(_ window: UIWindow, size: CGSize) -> UIImage {
         let format = UIGraphicsImageRendererFormat()
         format.scale = 2
-        return UIGraphicsImageRenderer(size: size, format: format).image { _ in
+        format.preferredRange = .standard
+        let image = UIGraphicsImageRenderer(size: size, format: format).image { _ in
             window.drawHierarchy(in: CGRect(origin: .zero, size: size), afterScreenUpdates: true)
         }
+        guard let png = image.pngData(), let normalized = UIImage(data: png, scale: 2) else { return image }
+        return normalized
     }
 }
