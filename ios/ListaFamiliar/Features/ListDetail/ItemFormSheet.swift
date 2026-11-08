@@ -65,9 +65,13 @@ struct ItemFormSheet: View {
                     if members.count > 1 { assigneeSection }
 
                     Toggle(isOn: $draft.isUrgent) {
-                        Label("Marcar como urgente", systemImage: "flame.fill")
-                            .font(.labelLarge)
-                            .foregroundStyle(.textPrimary)
+                        Label {
+                            Text("Marcar como urgente")
+                                .foregroundStyle(.textPrimary)
+                        } icon: {
+                            Image(systemName: "flame.fill").foregroundStyle(.highlight)
+                        }
+                        .font(.labelLarge)
                     }
                     .tint(.highlight)
                     .padding(Theme.Spacing.md)
