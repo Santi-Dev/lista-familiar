@@ -23,7 +23,7 @@ struct SignInView: View {
                 header
 
                 LabeledField("Correo electrónico", icon: "envelope", isFocused: focus == .email) {
-                    TextField("nombre@ejemplo.com", text: $email)
+                    TextField("Correo electrónico", text: $email, prompt: Text(verbatim: "nombre@ejemplo.com"))
                         .textContentType(.emailAddress)
                         .keyboardType(.emailAddress)
                         .textInputAutocapitalization(.never)
