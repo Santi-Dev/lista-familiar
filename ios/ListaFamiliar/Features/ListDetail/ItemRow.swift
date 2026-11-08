@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ItemRow: View {
     let item: ListItem
+    /// Los lectores ven el artículo, pero no lo marcan ni lo editan.
+    var isEditable = true
     let onToggle: () -> Void
     let onEdit: () -> Void
 
@@ -15,28 +17,50 @@ struct ItemRow: View {
                     .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
+            .disabled(!isEditable)
             .accessibilityLabel(item.isPurchased ? "Marcar \(item.name) como pendiente" : "Marcar \(item.name) como comprado")
             .sensoryFeedback(.impact(weight: .light), trigger: item.isPurchased)
 
             Button(action: onEdit) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(item.name)
-                        .font(.bodyLarge)
-                        .strikethrough(item.isPurchased)
-                        .foregroundStyle(item.isPurchased ? Color.textSecondary : Color.textPrimary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.sm) {
+                        Text(item.name)
+                            .font(.bodyLarge)
+                            .strikethrough(item.isPurchased)
+                            .foregroundStyle(item.isPurchased ? Color.textSecondary : Color.textPrimary)
+                        if item.isUrgent && !item.isPurchased {
+                            StatusChip(text: "Urgente", symbol: "flame.fill", tint: .red)
+                        }
+                        Spacer(minLength: 0)
+                    }
                     if let subtitle {
                         Text(subtitle)
                             .font(.bodySmall)
                             .foregroundStyle(item.isPurchased ? Color.brand : Color.textSecondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    if let assignee = item.assignee, !item.isPurchased {
+                        HStack(spacing: Theme.Spacing.xs) {
+                            AvatarView(name: assignee.name, size: 18)
+                            Text("Para \(assignee.name)")
+                                .font(.labelSmall)
+                                .foregroundStyle(.highlight)
+                        }
+                    }
+                    if let note = item.note {
+                        Text(note)
+                            .font(.bodySmall.italic())
+                            .foregroundStyle(.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
-            .accessibilityHint("Editar artículo")
+            .disabled(!isEditable)
+            .accessibilityHint(isEditable ? "Editar artículo" : "")
         }
+        .padding(.vertical, Theme.Spacing.xs)
         .frame(minHeight: Theme.controlHeight)
     }
 

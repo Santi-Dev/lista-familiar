@@ -37,6 +37,17 @@ final class GroupStore {
         return group
     }
 
+    /// Rol de una persona en el grupo. Si el grupo aún no se ha cargado, se asume editor
+    /// (si no lo es, el servidor rechaza el cambio y la pantalla avisa).
+    func role(of userID: UUID?) -> MemberRole {
+        guard let userID, let group else { return .editor }
+        return group.role(of: userID)
+    }
+
+    func setRole(_ role: MemberRole, for memberID: UUID) async throws {
+        group = try await backend.setMemberRole(role, memberID: memberID)
+    }
+
     func leave() async throws {
         try await backend.leaveGroup()
         reset()

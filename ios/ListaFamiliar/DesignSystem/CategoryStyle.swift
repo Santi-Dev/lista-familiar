@@ -1,5 +1,31 @@
 import SwiftUI
 
+extension MemberRole {
+    /// Color de la etiqueta del rol.
+    var tint: Color {
+        switch self {
+        case .owner: .brand
+        case .admin: Color(hex: 0x2A75D3)
+        case .editor: .textSecondary
+        case .viewer: .highlight
+        }
+    }
+}
+
+extension ListIcon {
+    /// Color del icono de la lista (tarjetas y selector).
+    var tint: Color {
+        switch self {
+        case .cart: .brand
+        case .food: Color(hex: 0xE11D48)
+        case .pharmacy: Color(hex: 0x0D9488)
+        case .party: Color(hex: 0xD97706)
+        case .cleaning: Color(hex: 0x0891B2)
+        case .home: Color(hex: 0x2A75D3)
+        }
+    }
+}
+
 extension ItemCategory {
     /// Color de la categoría (iconos, puntos y chips). Verdes, azules, ámbar… del sistema de diseño.
     var tint: Color {

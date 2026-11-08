@@ -60,6 +60,11 @@ final class SessionStore {
         await backend.signOut()
     }
 
+    /// Pide el correo para restablecer la contraseña. Funciona igual aunque el correo no tenga cuenta.
+    func sendPasswordReset(email: String) async throws {
+        try await backend.sendPasswordReset(email: email.trimmingCharacters(in: .whitespaces))
+    }
+
     func deleteAccount() async throws {
         try await backend.deleteAccount()
         phase = .signedOut
@@ -95,5 +100,12 @@ enum Credentials {
 
     static func canSignUp(name: String, email: String, password: String) -> Bool {
         NameInput.isValid(name) && isPlausibleEmail(email) && password.count >= minimumPasswordLength
+    }
+
+    /// Alta con la contraseña repetida y la política de privacidad aceptada.
+    static func canSignUp(
+        name: String, email: String, password: String, confirmation: String, acceptedPrivacy: Bool
+    ) -> Bool {
+        canSignUp(name: name, email: email, password: password) && password == confirmation && acceptedPrivacy
     }
 }

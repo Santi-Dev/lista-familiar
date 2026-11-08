@@ -115,6 +115,6 @@ Pasos completos en [docs/TESTFLIGHT.md](docs/TESTFLIGHT.md).
   el estado compartido y las llamadas al backend, en los stores.
 - Datos nuevos: método en `Backend` + `SupabaseBackend` + `InMemoryBackend`, y el caso de uso en el store que corresponda.
 - Colores del catálogo de assets (`Color.brand`, `.highlight`, `.surface`…), espaciados y radios de `Theme`.
-  La tipografía redondeada se aplica una vez en la raíz.
+  La tipografía (Plus Jakarta Sans para titulares e Inter para el cuerpo, de `Resources/Fonts`) se registra al arrancar y se aplica una vez en la raíz.
 - Textos de interfaz en español, en tono de «tú». Los nombres de código en inglés.
 - Cambios de UI: actualizar `mock/index.html`, revisar los `#Preview` o las capturas del CI.

@@ -34,7 +34,7 @@ struct PreviewScreenView: View {
         case .lists: MainTabView()
         case .detail: NavigationStack { ListDetailView(listID: SampleData.firstListID) }
         case .settings: MainTabView(initialTab: .settings)
-        case .createList: CreateListSheet { _ in }
+        case .createList: ListFormSheet { _ in }
         case .itemForm: ItemFormSheet(listID: SampleData.firstListID, mode: .add(category: .other)) { _ in }
         }
     }

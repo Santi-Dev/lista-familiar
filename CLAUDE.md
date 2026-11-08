@@ -5,7 +5,7 @@ Lee `README.md` (visión general) y `docs/ARCHITECTURE.md` (SwiftUI nativa con s
 ## Proyecto
 - App iOS 18+, solo **SwiftUI**, Swift 6. Proyecto Xcode nativo en `ios/ListaFamiliar.xcodeproj` (sin XcodeGen). Backend: **Supabase** (Auth, Postgres+RLS, Realtime). Sin servidor propio.
 - **Todos los textos de la interfaz en español, en tono de «tú»** (cercano y personal: «tus compras», «añade», «invita a tu familia»; nunca «vosotros»: «haced», «vuestra», «necesitáis»). Código y nombres en inglés.
-- Tema verde de supermercado: marca #2E7D4F, acento #E07A2E, tipografía SF Pro Rounded. Colores del catálogo de assets (`Color.brand`, `.highlight`, `.surface`…, con modo oscuro) y medidas de `Theme`.
+- Tema verde de supermercado (diseño de Stitch): marca #256A42, acento #D97706, tipografía Plus Jakarta Sans (titulares) e Inter (cuerpo), empaquetadas en `Resources/Fonts` y registradas por `FontRegistry`. Colores del catálogo de assets (`Color.brand`, `.highlight`, `.surface`…, con modo oscuro) y medidas de `Theme`.
 - Categorías: FRUTAS_VERDURAS, LACTEOS_HUEVOS, CARNES_PESCADO, PANADERIA, LIMPIEZA, BEBIDAS, DESPENSA, OTROS.
 
 ## Reglas de arquitectura

@@ -3,26 +3,38 @@ import SwiftUI
 struct ListCard: View {
     let list: ShoppingList
 
-    private var tint: Color { list.isComplete ? .brand : .highlight }
+    private var tint: Color { list.isComplete ? .brand : list.icon.tint }
     private var pending: Int { list.itemCount - list.purchasedCount }
 
     var body: some View {
         HStack(alignment: .top, spacing: Theme.Spacing.md) {
-            IconTile(symbol: "cart.fill", tint: list.isComplete ? .brand : .highlight, size: 48)
+            IconTile(symbol: list.icon.symbol, tint: list.icon.tint, size: 48)
 
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                Text(list.name)
-                    .font(.headlineSmall)
-                    .foregroundStyle(.textPrimary)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.sm) {
+                    Text(list.name)
+                        .font(.headlineSmall)
+                        .foregroundStyle(.textPrimary)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if list.isPinned {
+                        Image(systemName: "pin.fill")
+                            .font(.footnote)
+                            .foregroundStyle(.textSecondary)
+                            .accessibilityLabel("Fijada")
+                    }
+                }
 
                 HStack(spacing: Theme.Spacing.sm) {
                     status
-                    Text("\(list.purchasedCount) de \(list.itemCount) comprados")
-                        .font(.bodySmall)
-                        .foregroundStyle(.textSecondary)
+                    if let store = list.store {
+                        StatusChip(text: store, symbol: "storefront", tint: .textSecondary)
+                    }
                 }
+
+                Text("\(list.purchasedCount) de \(list.itemCount) comprados")
+                    .font(.bodySmall)
+                    .foregroundStyle(.textSecondary)
 
                 ProgressBar(value: list.progress, tint: tint)
 

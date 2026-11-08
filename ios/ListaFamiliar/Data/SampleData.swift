@@ -32,32 +32,38 @@ enum SampleData {
 
         let group = FamilyGroup(
             id: groupID, name: groupName, inviteCode: "ABC123", createdByID: lucia.id,
-            members: [lucia, marta, pablo], createdAt: ago(24 * 30))
+            members: [lucia, marta, pablo], createdAt: ago(24 * 30),
+            roles: [lucia.id: .owner, marta.id: .admin, pablo.id: .editor])
 
-        func list(_ n: Int, _ name: String, updated hours: Double) -> ShoppingList {
+        func list(_ n: Int, _ name: String, updated hours: Double, icon: ListIcon, store: String? = nil) -> ShoppingList {
             ShoppingList(
                 id: uuid(200 + n), name: name, isArchived: false, createdBy: lucia,
-                itemCount: 0, purchasedCount: 0, createdAt: ago(hours + 1), updatedAt: ago(hours))
+                itemCount: 0, purchasedCount: 0, createdAt: ago(hours + 1), updatedAt: ago(hours),
+                icon: icon, store: store)
         }
         let lists = [
-            list(0, firstListName, updated: 2),
-            list(1, "Cumpleaños de Marta", updated: 26),
-            list(2, "Limpieza del hogar", updated: 74),
+            list(0, firstListName, updated: 2, icon: .cart, store: "Mercadona"),
+            list(1, "Cumpleaños de Marta", updated: 26, icon: .party),
+            list(2, "Limpieza del hogar", updated: 74, icon: .cleaning),
         ]
 
         var order = 0
-        func item(_ list: Int, _ name: String, _ quantity: String?, _ category: ItemCategory, bought: Bool = false) -> ListItem {
+        func item(
+            _ list: Int, _ name: String, _ quantity: String?, _ category: ItemCategory, bought: Bool = false,
+            note: String? = nil, urgent: Bool = false, assignee: Member? = nil
+        ) -> ListItem {
             order += 1
             return ListItem(
                 id: uuid(1000 + order), listID: uuid(200 + list), name: name, quantity: quantity,
                 category: category, isPurchased: bought, purchasedBy: bought ? lucia : nil,
                 purchasedAt: bought ? ago(2) : nil, addedBy: order.isMultiple(of: 3) ? pablo : lucia,
-                createdAt: ago(3).addingTimeInterval(Double(order)), updatedAt: ago(2))
+                createdAt: ago(3).addingTimeInterval(Double(order)), updatedAt: ago(2),
+                note: note, isUrgent: urgent, assignee: assignee)
         }
         let items = [
-            item(0, "Manzanas", "1 kg", .produce),
-            item(0, "Leche", "2 L", .dairyEggs),
-            item(0, "Pechuga de pollo", "500 g", .meatFish),
+            item(0, "Manzanas", "1 kg", .produce, assignee: marta),
+            item(0, "Leche", "2 L", .dairyEggs, note: "Sin lactosa"),
+            item(0, "Pechuga de pollo", "500 g", .meatFish, urgent: true),
             item(0, "Pan integral", "1", .bakery, bought: true),
             item(0, "Arroz", "1 kg", .pantry, bought: true),
             item(0, "Agua con gas", "6", .drinks),

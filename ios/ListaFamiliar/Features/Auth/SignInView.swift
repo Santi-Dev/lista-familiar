@@ -8,6 +8,9 @@ struct SignInView: View {
     @State private var password = ""
     @State private var isSubmitting = false
     @State private var errorMessage: String?
+    @State private var notice: String?
+    @State private var isResetting = false
+    @State private var resetEmail = ""
     @FocusState private var focus: Field?
 
     private enum Field { case email, password }
@@ -35,7 +38,21 @@ struct SignInView: View {
                         focus: $focus, field: .password, submitLabel: .go, onSubmit: submit)
                 }
 
+                Button("¿Olvidaste tu contraseña?") {
+                    resetEmail = email
+                    isResetting = true
+                }
+                .font(.labelMedium)
+                .foregroundStyle(.brand)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+
                 FormErrorText(message: errorMessage)
+                if let notice {
+                    Label(notice, systemImage: "envelope.badge")
+                        .font(.bodyMedium)
+                        .foregroundStyle(.brand)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
 
                 Button(action: submit) {
                     HStack(spacing: Theme.Spacing.sm) {
@@ -59,10 +76,39 @@ struct SignInView: View {
             .padding(.horizontal, Theme.Spacing.lg)
             .padding(.bottom, Theme.Spacing.lg)
             .animation(.default, value: errorMessage)
+            .animation(.default, value: notice)
         }
         .scrollDismissesKeyboard(.interactively)
         .screenBackground()
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Restablecer contraseña", isPresented: $isResetting) {
+            TextField("Correo electrónico", text: $resetEmail)
+                .keyboardType(.emailAddress)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            Button("Cancelar", role: .cancel) {}
+            Button("Enviar enlace", action: sendReset)
+        } message: {
+            Text("Te enviaremos un enlace para crear una contraseña nueva.")
+        }
+    }
+
+    private func sendReset() {
+        guard Credentials.isPlausibleEmail(resetEmail) else {
+            errorMessage = "Escribe un correo válido."
+            return
+        }
+        let email = resetEmail
+        Task {
+            errorMessage = nil
+            notice = nil
+            do {
+                try await session.sendPasswordReset(email: email)
+                notice = "Si ese correo tiene cuenta, te hemos enviado un enlace para restablecer la contraseña."
+            } catch {
+                errorMessage = error.userMessage
+            }
+        }
     }
 
     private var header: some View {

@@ -7,15 +7,17 @@ struct ListsHomeView: View {
 
     @Environment(GroupStore.self) private var group
     @Environment(ListsStore.self) private var lists
+    @Environment(SessionStore.self) private var session
     @State private var path: [UUID] = []
     @State private var filter = Filter.all
     @State private var searchText = ""
     @State private var isCreating = false
-    @State private var renaming: ShoppingList?
-    @State private var renameText = ""
+    @State private var editingList: ShoppingList?
     @State private var deleting: ShoppingList?
     @State private var toast: String?
 
+    /// Los lectores consultan las listas, pero no las cambian.
+    private var canEdit: Bool { group.role(of: session.user?.id).canEdit }
     private var showArchived: Bool { filter == .archived }
     private var loadState: LoadState { lists.state(archived: showArchived) }
 
@@ -41,13 +43,10 @@ struct ListsHomeView: View {
                 .toolbar(.hidden, for: .navigationBar)
                 .navigationDestination(for: UUID.self) { ListDetailView(listID: $0) }
                 .sheet(isPresented: $isCreating) {
-                    CreateListSheet { path.append($0.id) }
+                    ListFormSheet { path.append($0.id) }
                 }
-                .alert("Renombrar lista", isPresented: $renaming.isPresent(), presenting: renaming) { list in
-                    TextField("Nombre", text: $renameText)
-                    Button("Cancelar", role: .cancel) {}
-                    Button("Guardar") { rename(list) }
-                        .disabled(!NameInput.isValid(renameText))
+                .sheet(item: $editingList) { list in
+                    ListFormSheet(mode: .edit(list))
                 }
                 .confirmationDialog(
                     "¿Eliminar «\(deleting?.name ?? "")»? Se borrarán todos sus artículos.",
@@ -86,16 +85,18 @@ struct ListsHomeView: View {
                 .foregroundStyle(.textPrimary)
                 .accessibilityAddTraits(.isHeader)
             Spacer(minLength: Theme.Spacing.sm)
-            Button { isCreating = true } label: {
-                Label("Nueva", systemImage: "plus")
-                    .font(.headlineSmall)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, Theme.Spacing.md)
-                    .padding(.vertical, 10)
-                    .brandSurface(in: .capsule)
+            if canEdit {
+                Button { isCreating = true } label: {
+                    Label("Nueva", systemImage: "plus")
+                        .font(.headlineSmall)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, Theme.Spacing.md)
+                        .padding(.vertical, 10)
+                        .brandSurface(in: .capsule)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Nueva lista")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Nueva lista")
         }
     }
 
@@ -215,7 +216,9 @@ struct ListsHomeView: View {
                     ListCard(list: list)
                 }
                 .buttonStyle(.plain)
-                .contextMenu { menu(for: list) }
+                .contextMenu {
+                    if canEdit { menu(for: list) }
+                }
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
@@ -227,16 +230,12 @@ struct ListsHomeView: View {
                systemImage: list.isArchived ? "tray.and.arrow.up" : "archivebox") {
             run { try await lists.setArchived(!list.isArchived, listID: list.id) }
         }
-        Button("Renombrar", systemImage: "pencil") {
-            renameText = list.name
-            renaming = list
+        Button(list.isPinned ? "Quitar de fijadas" : "Fijar al inicio",
+               systemImage: list.isPinned ? "pin.slash" : "pin") {
+            run { try await lists.setPinned(!list.isPinned, listID: list.id) }
         }
+        Button("Editar", systemImage: "pencil") { editingList = list }
         Button("Eliminar", systemImage: "trash", role: .destructive) { deleting = list }
-    }
-
-    private func rename(_ list: ShoppingList) {
-        let name = renameText
-        run { try await lists.rename(list.id, to: name) }
     }
 
     private func delete(_ list: ShoppingList) {

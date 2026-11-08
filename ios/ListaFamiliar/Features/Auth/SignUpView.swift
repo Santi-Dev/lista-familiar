@@ -7,15 +7,22 @@ struct SignUpView: View {
     @State private var name = ""
     @State private var email = ""
     @State private var password = ""
+    @State private var confirmation = ""
+    @State private var acceptedPrivacy = false
     @State private var isSubmitting = false
     @State private var errorMessage: String?
     @FocusState private var focus: Field?
 
-    private enum Field { case name, email, password }
+    private enum Field { case name, email, password, confirmation }
 
     private var canSubmit: Bool {
-        Credentials.canSignUp(name: name, email: email, password: password) && !isSubmitting
+        Credentials.canSignUp(
+            name: name, email: email, password: password, confirmation: confirmation,
+            acceptedPrivacy: acceptedPrivacy) && !isSubmitting
     }
+
+    private var passwordIsLongEnough: Bool { password.count >= Credentials.minimumPasswordLength }
+    private var passwordsDiffer: Bool { !confirmation.isEmpty && confirmation != password }
 
     var body: some View {
         ScrollView {
@@ -39,11 +46,32 @@ struct SignUpView: View {
                         .submitLabel(.next)
                         .onSubmit { focus = .password }
                 }
-                LabeledField("Contraseña", icon: "lock", isFocused: focus == .password) {
-                    PasswordField(
-                        placeholder: "Mínimo \(Credentials.minimumPasswordLength) caracteres", text: $password,
-                        isNew: true, focus: $focus, field: .password, submitLabel: .join, onSubmit: submit)
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    LabeledField("Contraseña", icon: "lock", isFocused: focus == .password) {
+                        PasswordField(
+                            placeholder: "Mínimo \(Credentials.minimumPasswordLength) caracteres", text: $password,
+                            isNew: true, focus: $focus, field: .password, submitLabel: .next,
+                            onSubmit: { focus = .confirmation })
+                    }
+                    Label("Mínimo \(Credentials.minimumPasswordLength) caracteres",
+                          systemImage: passwordIsLongEnough ? "checkmark.circle.fill" : "circle")
+                        .font(.bodySmall)
+                        .foregroundStyle(passwordIsLongEnough ? Color.brand : Color.textSecondary)
                 }
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    LabeledField("Confirmar contraseña", icon: "lock.rotation", isFocused: focus == .confirmation) {
+                        PasswordField(
+                            placeholder: "Repite la contraseña", text: $confirmation,
+                            isNew: true, focus: $focus, field: .confirmation, submitLabel: .join, onSubmit: submit)
+                    }
+                    if passwordsDiffer {
+                        Label("Las contraseñas no coinciden", systemImage: "exclamationmark.circle.fill")
+                            .font(.bodySmall)
+                            .foregroundStyle(.red)
+                    }
+                }
+
+                privacyRow
 
                 FormErrorText(message: errorMessage)
 
@@ -69,6 +97,7 @@ struct SignUpView: View {
             .padding(.horizontal, Theme.Spacing.lg)
             .padding(.bottom, Theme.Spacing.lg)
             .animation(.default, value: errorMessage)
+            .animation(.default, value: passwordsDiffer)
         }
         .scrollDismissesKeyboard(.interactively)
         .screenBackground()
@@ -96,6 +125,36 @@ struct SignUpView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, Theme.Spacing.sm)
         .padding(.bottom, Theme.Spacing.sm)
+    }
+
+    private var privacyRow: some View {
+        HStack(alignment: .top, spacing: Theme.Spacing.sm) {
+            Button { acceptedPrivacy.toggle() } label: {
+                Image(systemName: acceptedPrivacy ? "checkmark.square.fill" : "square")
+                    .font(.title3)
+                    .foregroundStyle(acceptedPrivacy ? Color.brand : Color.textSecondary)
+                    .frame(width: 32, height: 32)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Acepto la política de privacidad")
+            .accessibilityAddTraits(acceptedPrivacy ? .isSelected : [])
+            .sensoryFeedback(.selection, trigger: acceptedPrivacy)
+
+            Text(privacyText)
+                .font(.bodySmall)
+                .foregroundStyle(.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 6)
+        }
+    }
+
+    /// «Acepto la política de privacidad…» con el enlace a la página pública.
+    private var privacyText: AttributedString {
+        var text = AttributedString("Acepto la política de privacidad de Lista Familiar.")
+        if let range = text.range(of: "política de privacidad") {
+            text[range].link = AppConfig.privacyURL
+        }
+        return text
     }
 
     private func submit() {
