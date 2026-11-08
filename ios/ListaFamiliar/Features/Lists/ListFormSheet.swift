@@ -114,49 +114,15 @@ struct ListFormSheet: View {
     }
 
     private var storePicker: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            HStack {
-                Text("Tienda")
-                    .font(.labelMedium)
-                    .foregroundStyle(.textPrimary)
-                Spacer()
-                Text("Opcional")
-                    .font(.bodySmall)
-                    .foregroundStyle(.textSecondary)
-            }
-            ScrollView(.horizontal) {
-                HStack(spacing: Theme.Spacing.sm) {
-                    ForEach(ListDraft.suggestedStores, id: \.self) { store in
-                        let isSelected = draft.cleanStore == store
-                        Button {
-                            draft.store = isSelected ? "" : store
-                        } label: {
-                            Text(store)
-                                .font(.labelMedium)
-                                .foregroundStyle(isSelected ? Color.white : Color.textPrimary)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 9)
-                                .chipSurface(isSelected: isSelected)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        LabeledField("Tienda (opcional)", icon: "storefront", isFocused: focus == .store) {
+            TextField("Nombre de la tienda", text: $draft.store)
+                .focused($focus, equals: .store)
+                .submitLabel(.done)
+                .onChange(of: draft.store) { _, value in
+                    if value.count > ListDraft.maxStoreLength {
+                        draft.store = String(value.prefix(ListDraft.maxStoreLength))
                     }
                 }
-                .padding(.horizontal, Theme.Spacing.lg)
-            }
-            .padding(.horizontal, -Theme.Spacing.lg)
-            .scrollIndicators(.hidden)
-
-            LabeledField("Otra tienda", icon: "storefront", isFocused: focus == .store) {
-                TextField("Nombre de la tienda", text: $draft.store)
-                    .focused($focus, equals: .store)
-                    .submitLabel(.done)
-                    .onChange(of: draft.store) { _, value in
-                        if value.count > ListDraft.maxStoreLength {
-                            draft.store = String(value.prefix(ListDraft.maxStoreLength))
-                        }
-                    }
-            }
         }
     }
 

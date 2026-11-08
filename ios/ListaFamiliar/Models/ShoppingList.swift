@@ -60,8 +60,6 @@ struct ShoppingList: Identifiable, Hashable, Sendable {
 
 /// Datos editables de una lista: se usa tanto para crear como para editar.
 struct ListDraft: Hashable, Sendable {
-    /// Tiendas que se sugieren al crear una lista (el campo admite cualquier otra).
-    static let suggestedStores = ["Mercadona", "Carrefour", "Lidl", "Día", "Eroski"]
     static let maxStoreLength = 40
 
     var name = ""
