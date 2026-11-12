@@ -35,16 +35,20 @@ enum SampleData {
             members: [lucia, marta, pablo], createdAt: ago(24 * 30),
             roles: [lucia.id: .owner, marta.id: .admin, pablo.id: .editor])
 
-        func list(_ n: Int, _ name: String, updated hours: Double, icon: ListIcon, store: String? = nil) -> ShoppingList {
+        func list(
+            _ n: Int, _ name: String, updated hours: Double, icon: ListIcon, store: String? = nil,
+            kind: ListKind = .market
+        ) -> ShoppingList {
             ShoppingList(
                 id: uuid(200 + n), name: name, isArchived: false, createdBy: lucia,
                 itemCount: 0, purchasedCount: 0, createdAt: ago(hours + 1), updatedAt: ago(hours),
-                icon: icon, store: store)
+                icon: icon, store: store, kind: kind)
         }
         let lists = [
             list(0, firstListName, updated: 2, icon: .cart, store: "Mercadona"),
             list(1, "Cumpleaños de Marta", updated: 26, icon: .party),
             list(2, "Limpieza del hogar", updated: 74, icon: .cleaning),
+            list(3, "Escapada a Lisboa", updated: 120, icon: .trip, kind: .trip),
         ]
 
         var order = 0
@@ -74,6 +78,10 @@ enum SampleData {
             item(2, "Lejía", "1", .cleaning, bought: true),
             item(2, "Bayetas", "4", .cleaning, bought: true),
             item(2, "Friegasuelos", "1", .cleaning, bought: true),
+            item(3, "Pasaportes", nil, .documents, urgent: true),
+            item(3, "Cargador del móvil", nil, .tech),
+            item(3, "Camisetas", "5", .clothes),
+            item(3, "Crema solar", "1", .toiletries, bought: true),
         ]
 
         return InMemoryBackend(

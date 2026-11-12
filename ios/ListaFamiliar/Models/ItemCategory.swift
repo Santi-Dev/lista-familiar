@@ -10,6 +10,13 @@ enum ItemCategory: String, CaseIterable, Identifiable, Hashable, Sendable, Codab
     case drinks = "BEBIDAS"
     case pantry = "DESPENSA"
     case other = "OTROS"
+    // Categorías de las listas de viaje.
+    case clothes = "ROPA"
+    case tech = "TECNOLOGIA"
+    case toiletries = "ASEO"
+    case documents = "DOCUMENTOS"
+    case medicine = "BOTIQUIN"
+    case leisure = "OCIO"
 
     var id: String { rawValue }
 
@@ -28,6 +35,12 @@ enum ItemCategory: String, CaseIterable, Identifiable, Hashable, Sendable, Codab
         case .drinks: "Bebidas"
         case .pantry: "Despensa"
         case .other: "Otros"
+        case .clothes: "Ropa"
+        case .tech: "Tecnología"
+        case .toiletries: "Aseo"
+        case .documents: "Documentos"
+        case .medicine: "Botiquín"
+        case .leisure: "Ocio"
         }
     }
 
@@ -41,6 +54,12 @@ enum ItemCategory: String, CaseIterable, Identifiable, Hashable, Sendable, Codab
         case .drinks: "waterbottle.fill"
         case .pantry: "cabinet.fill"
         case .other: "tag.fill"
+        case .clothes: "tshirt.fill"
+        case .tech: "laptopcomputer"
+        case .toiletries: "shower.fill"
+        case .documents: "doc.text.fill"
+        case .medicine: "cross.case.fill"
+        case .leisure: "book.fill"
         }
     }
 }

@@ -44,15 +44,17 @@ struct ListFormSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                    if !isEditing { kindPicker }
+
                     LabeledField("Nombre de la lista", icon: draft.icon.symbol, isFocused: focus == .name) {
-                        TextField("Mercado semanal", text: $draft.name)
+                        TextField(draft.kind.namePlaceholder, text: $draft.name)
                             .focused($focus, equals: .name)
                             .submitLabel(.done)
                             .onSubmit(save)
                     }
 
                     iconPicker
-                    storePicker
+                    if draft.kind == .market { storePicker }
 
                     Toggle(isOn: $draft.isPinned) {
                         VStack(alignment: .leading, spacing: 2) {
@@ -87,6 +89,33 @@ struct ListFormSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+    }
+
+    /// Tipo de lista (solo al crear): decide las categorías de los artículos.
+    private var kindPicker: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            Text("Tipo de lista")
+                .font(.labelMedium)
+                .foregroundStyle(.textPrimary)
+            Picker("Tipo de lista", selection: kindBinding) {
+                ForEach(ListKind.allCases) { kind in
+                    Label(kind.title, systemImage: kind.symbol).tag(kind)
+                }
+            }
+            .pickerStyle(.segmented)
+            .sensoryFeedback(.selection, trigger: draft.kind)
+        }
+    }
+
+    /// Al cambiar de tipo se propone su icono, salvo que ya hayas elegido otro a mano.
+    private var kindBinding: Binding<ListKind> {
+        Binding(
+            get: { draft.kind },
+            set: { newKind in
+                if draft.icon == draft.kind.defaultIcon { draft.icon = newKind.defaultIcon }
+                if newKind != .market { draft.store = "" }
+                draft.kind = newKind
+            })
     }
 
     private var iconPicker: some View {

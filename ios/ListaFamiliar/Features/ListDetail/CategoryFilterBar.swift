@@ -4,12 +4,13 @@ import SwiftUI
 struct CategoryFilterBar: View {
     @Binding var selection: ItemCategory?
     let items: [ListItem]
+    var kind: ListKind = .market
 
     var body: some View {
         ScrollView(.horizontal) {
             HStack(spacing: Theme.Spacing.sm) {
                 chip("Todas", symbol: nil, tint: nil, pending: 0, isSelected: selection == nil) { selection = nil }
-                ForEach(ItemCategory.allCases) { category in
+                ForEach(kind.categories) { category in
                     chip(category.title, symbol: category.symbol, tint: category.tint,
                          pending: items.pendingCount(in: category),
                          isSelected: selection == category) { selection = category }
