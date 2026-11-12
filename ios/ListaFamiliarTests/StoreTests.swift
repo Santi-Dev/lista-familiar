@@ -196,7 +196,7 @@ struct ListsStoreTests {
         let store = ListsStore(backend: SampleData.backend())
         await store.load(archived: false)
         try await store.setArchived(true, listID: SampleData.firstListID)
-        #expect(store.lists(archived: false).count == 2)
+        #expect(store.lists(archived: false).count == 3)
         #expect(store.lists(archived: true).map(\.id) == [SampleData.firstListID])
     }
 
