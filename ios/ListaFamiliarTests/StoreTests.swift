@@ -113,10 +113,19 @@ struct ListsStoreTests {
         let store = ListsStore(backend: SampleData.backend())
         await store.load(archived: false)
         let lists = store.lists(archived: false)
-        #expect(lists.map(\.name) == ["Mercado semanal", "Cumpleaños de Marta", "Limpieza del hogar"])
+        #expect(lists.map(\.name) == ["Mercado semanal", "Cumpleaños de Marta", "Limpieza del hogar", "Escapada a Lisboa"])
         #expect(lists.first?.itemCount == 6)
         #expect(lists.first?.purchasedCount == 2)
         #expect(store.state(archived: false) == .loaded)
+    }
+
+    @Test func createTripListKeepsItsKind() async throws {
+        let store = ListsStore(backend: SampleData.backend())
+        let list = try await store.createList(
+            ListDraft(name: "Viaje a Roma", icon: .trip, kind: .trip), groupID: SampleData.groupID)
+        #expect(list.kind == .trip)
+        #expect(list.icon == .trip)
+        #expect(try await store.createList(named: "Compra", groupID: SampleData.groupID).kind == .market)
     }
 
     @Test func failedFirstLoadShowsError() async {
@@ -133,7 +142,7 @@ struct ListsStoreTests {
         await store.load(archived: false)
         await backend.failNextCall(with: .offline)
         await store.load(archived: false)
-        #expect(store.lists(archived: false).count == 3)
+        #expect(store.lists(archived: false).count == 4)
         #expect(store.state(archived: false) == .loaded)
     }
 
@@ -187,7 +196,7 @@ struct ListsStoreTests {
         let store = ListsStore(backend: SampleData.backend())
         await store.load(archived: false)
         try await store.setArchived(true, listID: SampleData.firstListID)
-        #expect(store.lists(archived: false).count == 2)
+        #expect(store.lists(archived: false).count == 3)
         #expect(store.lists(archived: true).map(\.id) == [SampleData.firstListID])
     }
 

@@ -55,6 +55,29 @@ struct ModelTests {
         #expect(items.pendingCount(in: .bakery) == 1)
     }
 
+    @Test("Cada tipo de lista tiene sus categorías, y «Otros» vale para todos")
+    func categoriesPerKind() {
+        #expect(ListKind.market.categories.contains(.produce))
+        #expect(!ListKind.market.categories.contains(.clothes))
+        #expect(ListKind.trip.categories == [.clothes, .tech, .toiletries, .documents, .medicine, .leisure, .other])
+        for kind in ListKind.allCases { #expect(kind.categories.contains(.other)) }
+        #expect(ListKind(databaseValue: "FUTURO") == .market)
+        #expect(ItemCategory(databaseValue: "TECNOLOGIA") == .tech)
+    }
+
+    @Test("Las secciones de un viaje siguen sus categorías y no pierden artículos de otro tipo")
+    func tripSections() {
+        let now = Date()
+        func item(_ name: String, _ category: ItemCategory) -> ListItem {
+            ListItem(id: UUID(), listID: UUID(), name: name, quantity: nil, category: category, isPurchased: false,
+                     purchasedBy: nil, purchasedAt: nil, addedBy: nil, createdAt: now, updatedAt: now)
+        }
+        let items = [item("Móvil", .tech), item("Camiseta", .clothes), item("Leche", .dairyEggs)]
+        let sections = items.sectioned(kind: .trip)
+        #expect(sections.map(\.category) == [.clothes, .tech, .dairyEggs])
+        #expect(items.sectioned(kind: .trip, filter: .tech).map(\.category) == [.tech])
+    }
+
     @Test func attribution() {
         let lucia = Member(id: UUID(), name: "Lucía")
         let pablo = Member(id: UUID(), name: "Pablo")

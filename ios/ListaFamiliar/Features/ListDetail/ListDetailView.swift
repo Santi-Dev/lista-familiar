@@ -16,7 +16,8 @@ struct ListDetailView: View {
 
     private var list: ShoppingList? { lists.list(listID) }
     private var items: [ListItem] { lists.items(in: listID) }
-    private var sections: [ItemSection] { items.sectioned(filter: filter) }
+    private var kind: ListKind { list?.kind ?? .market }
+    private var sections: [ItemSection] { items.sectioned(kind: kind, filter: filter) }
     /// Los lectores consultan la lista, pero no la cambian.
     private var canEdit: Bool { group.role(of: session.user?.id).canEdit }
 
@@ -73,7 +74,7 @@ struct ListDetailView: View {
         case (let list?, _):
             VStack(spacing: 0) {
                 header(list)
-                CategoryFilterBar(selection: $filter, items: items)
+                CategoryFilterBar(selection: $filter, items: items, kind: list.kind)
                 if sections.isEmpty {
                     emptyState
                 } else {
@@ -141,7 +142,7 @@ struct ListDetailView: View {
         } else {
             EmptyStateView(
                 icon: "basket", title: "La lista está vacía",
-                message: "Añade lo que necesitas comprar.")
+                message: kind.emptyMessage)
         }
     }
 

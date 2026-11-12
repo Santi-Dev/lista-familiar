@@ -40,6 +40,7 @@ struct ItemFormSheet: View {
     }
 
     private var members: [Member] { groups.group?.members ?? [] }
+    private var kind: ListKind { lists.list(listID)?.kind ?? .market }
     private var canSave: Bool { draft.isValid && !isSaving }
 
     var body: some View {
@@ -57,7 +58,7 @@ struct ItemFormSheet: View {
                         Text("Categoría")
                             .font(.labelMedium)
                             .foregroundStyle(.textPrimary)
-                        CategoryPicker(selection: $draft.category)
+                        CategoryPicker(selection: $draft.category, categories: kind.categories)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -308,10 +309,11 @@ struct ItemFormSheet: View {
 /// Rejilla de categorías de dos columnas.
 private struct CategoryPicker: View {
     @Binding var selection: ItemCategory
+    let categories: [ItemCategory]
 
     var body: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.Spacing.sm) {
-            ForEach(ItemCategory.allCases) { category in
+            ForEach(categories) { category in
                 let isSelected = selection == category
                 Button { selection = category } label: {
                     Label(category.title, systemImage: category.symbol)

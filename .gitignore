@@ -18,3 +18,6 @@ supabase/.branches/
 node_modules/
 tools/store/out/
 tools/store/raw/
+
+# Imágenes para App Store Connect (generadas, no se versionan)
+store-assets/

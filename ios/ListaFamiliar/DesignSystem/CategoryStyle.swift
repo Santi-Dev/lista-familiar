@@ -22,6 +22,7 @@ extension ListIcon {
         case .party: Color(hex: 0xD97706)
         case .cleaning: Color(hex: 0x0891B2)
         case .home: Color(hex: 0x2A75D3)
+        case .trip: Color(hex: 0x7C3AED)
         }
     }
 }
@@ -38,6 +39,12 @@ extension ItemCategory {
         case .drinks: Color(hex: 0x0891B2)
         case .pantry: Color(hex: 0xD97706)
         case .other: Color(hex: 0x6B7280)
+        case .clothes: Color(hex: 0x7C3AED)
+        case .tech: Color(hex: 0x2A75D3)
+        case .toiletries: Color(hex: 0x0891B2)
+        case .documents: Color(hex: 0xB45309)
+        case .medicine: Color(hex: 0xE11D48)
+        case .leisure: Color(hex: 0x0D9488)
         }
     }
 }

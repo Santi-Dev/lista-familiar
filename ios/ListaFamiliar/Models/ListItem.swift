@@ -136,11 +136,13 @@ struct ItemSection: Identifiable, Hashable, Sendable {
 }
 
 extension Array where Element == ListItem {
-    /// Agrupa por categoría en el orden de `ItemCategory.allCases`; los pendientes van antes que los comprados
-    /// y, entre los pendientes, los urgentes primero.
-    func sectioned(filter: ItemCategory? = nil) -> [ItemSection] {
+    /// Agrupa por categoría en el orden de las categorías del tipo de lista; los pendientes van antes que los comprados
+    /// y, entre los pendientes, los urgentes primero. Un artículo con una categoría ajena al tipo (por ejemplo, si
+    /// la lista cambió) no se pierde: se muestra al final.
+    func sectioned(kind: ListKind = .market, filter: ItemCategory? = nil) -> [ItemSection] {
         let grouped = Dictionary(grouping: self) { $0.category }
-        return ItemCategory.allCases.compactMap { category in
+        let extra = ItemCategory.allCases.filter { !kind.categories.contains($0) && grouped[$0] != nil }
+        return (kind.categories + extra).compactMap { category in
             guard filter == nil || filter == category,
                   let items = grouped[category], !items.isEmpty else { return nil }
             let sorted = items.sorted { lhs, rhs in

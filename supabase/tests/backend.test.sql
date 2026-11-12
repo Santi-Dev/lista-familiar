@@ -51,6 +51,10 @@ begin
   perform pg_temp.expect('código falso rechazado', failed::int, 1);
   perform join_family_group(lower(code));
   perform pg_temp.expect('u2 ve las listas del grupo', (select count(*) from shopping_lists), 1);
+  -- Tipos de lista: las listas existentes son «Mercado» por defecto y las categorías de viaje existen.
+  perform pg_temp.expect('lista por defecto es MARKET', (select count(*) from shopping_lists where kind = 'MARKET'), 1);
+  perform pg_temp.expect('categorias de viaje existen', (select count(*) from unnest(enum_range(null::item_category)) c where c::text in ('ROPA','TECNOLOGIA','ASEO','DOCUMENTOS','BOTIQUIN','OCIO')), 6);
+  perform pg_temp.expect('icono de viaje existe', (select count(*) from unnest(enum_range(null::list_icon)) c where c::text = 'TRIP'), 1);
   perform pg_temp.expect('u2 ve los perfiles del grupo', (select count(*) from profiles), 2);
   insert into list_items (shopping_list_id, name, quantity, category) values (l, 'Leche', '2 L', 'LACTEOS_HUEVOS') returning id into i;
   select * into it from list_items where id = i;

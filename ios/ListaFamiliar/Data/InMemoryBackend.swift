@@ -225,7 +225,7 @@ actor InMemoryBackend: Backend {
         let list = ShoppingList(
             id: UUID(), name: draft.cleanName, isArchived: false, createdBy: user.asMember,
             itemCount: 0, purchasedCount: 0, createdAt: clock(), updatedAt: clock(),
-            icon: draft.icon, store: draft.cleanStore, isPinned: draft.isPinned)
+            icon: draft.icon, store: draft.cleanStore, isPinned: draft.isPinned, kind: draft.kind)
         lists.append(list)
         return list
     }

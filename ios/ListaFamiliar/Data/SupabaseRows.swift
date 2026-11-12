@@ -52,11 +52,12 @@ struct GroupRecord: Decodable, Sendable {
 }
 
 struct ListRecord: Decodable, Sendable {
-    static let columns = "id,name,is_archived,icon,store,is_pinned,created_at,updated_at,created_by:profiles!created_by_id(id,name),list_items(is_purchased)"
+    static let columns = "id,name,is_archived,icon,kind,store,is_pinned,created_at,updated_at,created_by:profiles!created_by_id(id,name),list_items(is_purchased)"
     let id: UUID
     let name: String
     let isArchived: Bool
     let icon: String
+    let kind: String
     let store: String?
     let isPinned: Bool
     let createdAt: String
@@ -70,7 +71,7 @@ struct ListRecord: Decodable, Sendable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, name, icon, store
+        case id, name, icon, kind, store
         case isArchived = "is_archived"
         case isPinned = "is_pinned"
         case createdAt = "created_at"
@@ -85,7 +86,8 @@ struct ListRecord: Decodable, Sendable {
             id: id, name: name, isArchived: isArchived, createdBy: createdBy?.model,
             itemCount: flags.count, purchasedCount: flags.count(where: \.isPurchased),
             createdAt: PostgresDate.parse(createdAt), updatedAt: PostgresDate.parse(updatedAt),
-            icon: ListIcon(databaseValue: icon), store: store, isPinned: isPinned)
+            icon: ListIcon(databaseValue: icon), store: store, isPinned: isPinned,
+            kind: ListKind(databaseValue: kind))
     }
 }
 
@@ -136,6 +138,7 @@ struct ListInsert: Encodable, Sendable {
     let familyGroupID: UUID
     let createdByID: UUID
     let icon: String
+    let kind: String
     let store: String?
     let isPinned: Bool
 
@@ -144,12 +147,13 @@ struct ListInsert: Encodable, Sendable {
         self.familyGroupID = familyGroupID
         self.createdByID = createdByID
         icon = draft.icon.rawValue
+        kind = draft.kind.rawValue
         store = draft.cleanStore
         isPinned = draft.isPinned
     }
 
     enum CodingKeys: String, CodingKey {
-        case name, icon, store
+        case name, icon, kind, store
         case familyGroupID = "family_group_id"
         case createdByID = "created_by_id"
         case isPinned = "is_pinned"
